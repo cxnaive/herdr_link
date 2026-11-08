@@ -118,7 +118,7 @@ func TestUploadAcceptsAdvertisedDocumentFormats(t *testing.T) {
 	}
 }
 
-func TestUploadRejectsMismatchedDocumentContainer(t *testing.T) {
+func TestUploadKeepsMismatchedDocumentContainerAsGenericFile(t *testing.T) {
 	now := time.Now()
 	manager := newTestManager(t, &now)
 	target := uploadTarget(0)
@@ -132,13 +132,13 @@ func TestUploadRejectsMismatchedDocumentContainer(t *testing.T) {
 		int64(len(content)),
 	)
 	sendChunk(t, manager, target, begin.UploadID, 0, 0, content)
-	_, err := manager.Finish(FinishRequest{
+	result, err := manager.Finish(FinishRequest{
 		Target:   target,
 		UploadID: begin.UploadID,
 		Files:    []FileDigest{{FileIndex: 0, SHA256: digestFor(content)}},
 	})
-	if code := errorCode(t, err); code != "upload_content_type_mismatch" {
-		t.Fatalf("code = %q", code)
+	if err != nil || len(result.Attachments) != 1 || result.Attachments[0].MediaType != genericMediaType {
+		t.Fatalf("unverified document must be stored as a generic file: %#v, %v", result, err)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestUploadSessionFinishesTypedPrivateBatch(t *testing.T) {
 	}
 }
 
-func TestUploadRejectsTraversalTypesAndBoundsBeforeStaging(t *testing.T) {
+func TestUploadRejectsTraversalAndBoundsBeforeStaging(t *testing.T) {
 	now := time.Now()
 	manager := newTestManager(t, &now)
 	target := uploadTarget(1)
@@ -192,8 +192,6 @@ func TestUploadRejectsTraversalTypesAndBoundsBeforeStaging(t *testing.T) {
 	}{
 		{"traversal", FileSpec{Name: "../escape.png", MediaType: "image/png", Bytes: 8}, "upload_name_invalid"},
 		{"absolute", FileSpec{Name: "/tmp/escape.png", MediaType: "image/png", Bytes: 8}, "upload_name_invalid"},
-		{"extension spoof", FileSpec{Name: "payload.exe", MediaType: "image/png", Bytes: 8}, "upload_extension_mismatch"},
-		{"mime spoof", FileSpec{Name: "payload.png", MediaType: "application/octet-stream", Bytes: 8}, "upload_type_unsupported"},
 		{"oversize", FileSpec{Name: "large.png", MediaType: "image/png", Bytes: 4097}, "upload_file_size_invalid"},
 	}
 	for _, test := range cases {
@@ -264,28 +262,20 @@ func TestChunkAfterFinalDeclaredFileIsRejected(t *testing.T) {
 	}
 }
 
-func TestFinishRejectsFinalDigestAndMagicSpoofThenCleans(t *testing.T) {
+func TestFinishRejectsFinalDigestThenCleans(t *testing.T) {
 	now := time.Now()
 	target := uploadTarget(3)
-	for _, test := range []struct {
-		name   string
-		data   []byte
-		digest string
-		code   string
-	}{
-		{"final digest", []byte("plain text"), strings.Repeat("0", 64), "upload_final_digest_mismatch"},
-		{"magic spoof", []byte("not a png"), digestFor([]byte("not a png")), "upload_content_type_mismatch"},
+	for _, test := range []struct{ name, media string }{
+		{"note.txt", "text/plain"},
+		{"clip.mp4", "video/mp4"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			manager := newTestManager(t, &now)
-			mediaType, name := "text/plain", "note.txt"
-			if test.name == "magic spoof" {
-				mediaType, name = "image/png", "image.png"
-			}
-			begin := beginOne(t, manager, target, name, mediaType, int64(len(test.data)))
-			sendChunk(t, manager, target, begin.UploadID, 0, 0, test.data)
-			_, err := manager.Finish(FinishRequest{Target: target, UploadID: begin.UploadID, Files: []FileDigest{{FileIndex: 0, SHA256: test.digest}}})
-			if code := errorCode(t, err); code != test.code {
+			data := []byte("original file bytes")
+			begin := beginOne(t, manager, target, test.name, test.media, int64(len(data)))
+			sendChunk(t, manager, target, begin.UploadID, 0, 0, data)
+			_, err := manager.Finish(FinishRequest{Target: target, UploadID: begin.UploadID, Files: []FileDigest{{FileIndex: 0, SHA256: strings.Repeat("0", 64)}}})
+			if code := errorCode(t, err); code != "upload_final_digest_mismatch" {
 				t.Fatalf("code = %q", code)
 			}
 			if _, err := os.Stat(filepath.Join(manager.rootPath, "sessions", begin.UploadID)); !os.IsNotExist(err) {
@@ -349,7 +339,7 @@ func TestUploadScopesExpiryCancelAndCleanup(t *testing.T) {
 	}
 }
 
-func TestTextValidationHandlesUTF8AcrossChunksAndRejectsInvalidBytes(t *testing.T) {
+func TestTextValidationHandlesUTF8AcrossChunksAndKeepsOtherEncodings(t *testing.T) {
 	now := time.Now()
 	target := uploadTarget(8)
 	valid := []byte("a€b")
@@ -365,9 +355,9 @@ func TestTextValidationHandlesUTF8AcrossChunksAndRejectsInvalidBytes(t *testing.
 	manager2 := newTestManager(t, &now)
 	begin2 := beginOne(t, manager2, target, "invalid.md", "text/markdown", int64(len(invalid)))
 	sendChunk(t, manager2, target, begin2.UploadID, 0, 0, invalid)
-	_, err := manager2.Finish(FinishRequest{Target: target, UploadID: begin2.UploadID, Files: []FileDigest{{FileIndex: 0, SHA256: digestFor(invalid)}}})
-	if code := errorCode(t, err); code != "upload_content_type_mismatch" {
-		t.Fatalf("invalid UTF-8 code = %q", code)
+	result, err := manager2.Finish(FinishRequest{Target: target, UploadID: begin2.UploadID, Files: []FileDigest{{FileIndex: 0, SHA256: digestFor(invalid)}}})
+	if err != nil || len(result.Attachments) != 1 || result.Attachments[0].MediaType != genericMediaType {
+		t.Fatalf("non-UTF-8 file was lost or misclassified: %#v, %v", result, err)
 	}
 }
 

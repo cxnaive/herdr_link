@@ -29,6 +29,7 @@ project follows [Semantic Versioning](https://semver.org/).
 - Read-only, exact-workspace document downloads in 512 KiB verified chunks (up to 12 MiB per file), enabling native PDF/Markdown/image reviewers without raising transport limits or granting file-write access.
 
 ### Fixed
+- Upload desktop videos and other unrecognized attachment formats as ordinary files for the remote Agent, preserving bytes and safe file extensions. Keep size, integrity and session checks, and show a readable update message when an older Relay rejects the file type.
 - Right-align desktop user messages with the composer, fit short message bubbles to their contents, and reflow long messages when resizing or opening the file panel. Center replies, tools and the composer within a shared reading width.
 - Soften Codex terminal's dark gray message and input backgrounds in desktop light mode, with an option to restore their original appearance. Preserve other Agent backgrounds, colored highlights, selection and terminal contents.
 - Read exact Codex standalone/embedded turn lifecycle records for running status and elapsed time. A temporary Herdr idle snapshot no longer ends an active turn; missing or conflicting evidence remains unknown.

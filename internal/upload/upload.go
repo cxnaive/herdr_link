@@ -35,6 +35,7 @@ const (
 	DefaultMaxSessionsPerOwner = 4
 	DefaultSessionTTL          = 30 * time.Minute
 	DefaultAttachmentTTL       = 7 * 24 * time.Hour
+	genericMediaType           = "application/octet-stream"
 	attachmentIndexFilename    = "attachments.json"
 	attachmentIndexVersion     = 1
 )
@@ -469,7 +470,9 @@ func (m *Manager) Finish(request FinishRequest) (FinishResult, error) {
 			return fail(failure("upload_incomplete", map[string]any{"file_index": index}))
 		}
 		if err := validateContent(item); err != nil {
-			return fail(err)
+			// Content we cannot classify is still a file the Agent can read.
+			// Do not publish an unverified image/document media type.
+			item.spec.MediaType = genericMediaType
 		}
 		if err := item.file.Sync(); err != nil {
 			return fail(failure("upload_staging_failed", nil))
@@ -496,7 +499,7 @@ func (m *Manager) Finish(request FinishRequest) (FinishResult, error) {
 			}
 			return fail(idErr)
 		}
-		extension := canonicalExtension(item.spec.MediaType)
+		extension := attachmentExtension(item.spec.Name, item.spec.MediaType)
 		relPath := "objects/" + ref + extension
 		if closeErr := item.file.Close(); closeErr != nil {
 			item.file = nil
@@ -829,9 +832,9 @@ func (m *Manager) loadAttachmentsLocked() (int, error) {
 	for _, stored := range index.Attachments {
 		attachment := stored.Attachment
 		decoded, decodeErr := base64.RawURLEncoding.DecodeString(attachment.Ref)
-		_, specErr := normalizeSpec(FileSpec{Name: attachment.Name, MediaType: attachment.MediaType, Bytes: attachment.Bytes}, m.maxFile)
-		expectedPath := "objects/" + attachment.Ref + canonicalExtension(attachment.MediaType)
-		if decodeErr != nil || len(decoded) != 24 || specErr != nil || !validDigest(attachment.SHA256) ||
+		spec, specErr := normalizeSpec(FileSpec{Name: attachment.Name, MediaType: attachment.MediaType, Bytes: attachment.Bytes}, m.maxFile)
+		expectedPath := "objects/" + attachment.Ref + attachmentExtension(attachment.Name, attachment.MediaType)
+		if decodeErr != nil || len(decoded) != 24 || specErr != nil || spec.MediaType != attachment.MediaType || !validDigest(attachment.SHA256) ||
 			!validDiskTarget(stored.Target) || stored.RelPath != expectedPath || attachment.ExpiresAt.IsZero() {
 			dropped++
 			continue
@@ -1026,18 +1029,15 @@ func normalizeSpec(spec FileSpec, maxBytes int64) (FileSpec, error) {
 	if spec.Bytes < 1 || spec.Bytes > maxBytes {
 		return FileSpec{}, failure("upload_file_size_invalid", map[string]any{"max_bytes": maxBytes})
 	}
-	allowedExtensions, ok := allowedTypes[spec.MediaType]
-	if !ok {
-		return FileSpec{}, failure("upload_type_unsupported", nil)
-	}
+	knownExtensions := knownTypes[spec.MediaType]
 	extension := strings.ToLower(filepath.Ext(spec.Name))
-	if !allowedExtensions[extension] {
-		return FileSpec{}, failure("upload_extension_mismatch", nil)
+	if !knownExtensions[extension] {
+		spec.MediaType = genericMediaType
 	}
 	return spec, nil
 }
 
-var allowedTypes = map[string]map[string]bool{
+var knownTypes = map[string]map[string]bool{
 	"image/png":        {".png": true},
 	"image/jpeg":       {".jpg": true, ".jpeg": true},
 	"image/gif":        {".gif": true},
@@ -1055,6 +1055,24 @@ var allowedTypes = map[string]map[string]bool{
 	"application/vnd.oasis.opendocument.text":                                   {".odt": true},
 	"application/vnd.oasis.opendocument.spreadsheet":                            {".ods": true},
 	"application/vnd.oasis.opendocument.presentation":                           {".odp": true},
+}
+
+func attachmentExtension(name, mediaType string) string {
+	if mediaType != genericMediaType {
+		return canonicalExtension(mediaType)
+	}
+	// Preserve common file suffixes for Agent tools, while storage names stay
+	// opaque and cannot contain path separators or platform-special characters.
+	ext := strings.ToLower(filepath.Ext(name))
+	if len(ext) < 2 || len(ext) > 33 {
+		return ".bin"
+	}
+	for _, c := range ext[1:] {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-') {
+			return ".bin"
+		}
+	}
+	return ext
 }
 
 func canonicalExtension(mediaType string) string {
@@ -1197,6 +1215,8 @@ func validateContent(item *sessionFile) error {
 	prefix := item.prefix
 	valid := false
 	switch item.spec.MediaType {
+	case genericMediaType:
+		return nil
 	case "image/png":
 		valid = len(prefix) >= 8 && string(prefix[:8]) == "\x89PNG\r\n\x1a\n"
 	case "image/jpeg":

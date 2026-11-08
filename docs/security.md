@@ -103,8 +103,12 @@ bootstrap invitation, still bound to the relay key; that invitation keeps
 refreshing its ten-minute window on every attempt for as long as re-arming is
 enabled. A gateway keeps a stable identity, so its pairings survive restarts.
 
-Attachment uploads are staged privately, validated by content and container
-format, and represented to the phone by opaque references. A live upload is
+Attachment uploads are staged privately, checked for size and chunk/final
+SHA-256 integrity, and represented to clients by opaque references. Recognized
+image/document types retain their media type only when their extension and
+content checks pass. Unknown types or mismatches are stored as ordinary binary
+files, preserving a safe extension for Agent tools; uploading does not execute
+or preview them. A live upload is
 bound to the exact target generation; a persisted reference is bound to the
 server session, pane, terminal, and agent session so it survives only a relay
 process restart. The relay revalidates the current exact target before
