@@ -14,6 +14,12 @@ class ComponentSelectionTest(unittest.TestCase):
         selected = CI.classify(["desktop/view.go", "desktop/go.sum"])
         self.assertEqual([k for k, v in selected.items() if v], ["desktop"])
 
+    def test_each_desktop_workflow_selects_only_desktop(self):
+        for platform in ('windows', 'linux', 'macos'):
+            with self.subTest(platform=platform):
+                selected = CI.classify([f'.github/workflows/desktop-{platform}.yml'])
+                self.assertEqual([k for k, v in selected.items() if v], ['desktop'])
+
     def test_docs_do_not_start_product_builds(self):
         self.assertFalse(any(CI.classify(["README.md", "desktop/ANDROID_PARITY.md", "docs/native-ci.md"]).values()))
 

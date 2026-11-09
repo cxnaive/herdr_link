@@ -20,7 +20,7 @@ def classify(paths):
                 selected[name] = True
         if p == ".github/workflows/build-artifacts.yml":
             selected["native"] = selected["android"] = True
-        if p == ".github/workflows/desktop-windows.yml":
+        if p in (".github/workflows/desktop-windows.yml", ".github/workflows/desktop-linux.yml", ".github/workflows/desktop-macos.yml"):
             selected["desktop"] = True
         if p.endswith(".md") or p.startswith(("docs/", "images/")):
             continue

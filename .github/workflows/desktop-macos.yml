@@ -1,0 +1,138 @@
+name: desktop-macos
+
+on:
+  push:
+    branches: [feat/android-file-companion, main, dev]
+    paths:
+      - 'desktop/**'
+      - '!desktop/**/*.md'
+      - 'contracts/**'
+      - 'internal/protocol/**'
+      - 'internal/directterminal/**'
+      - 'internal/transport/**'
+      - 'internal/gateway/**'
+      - 'internal/app/desktop_terminal.go'
+      - 'internal/app/server.go'
+      - '.github/workflows/desktop-macos.yml'
+  pull_request:
+    branches: [feat/android-file-companion, main, dev]
+    paths:
+      - 'desktop/**'
+      - '!desktop/**/*.md'
+      - 'contracts/**'
+      - 'internal/protocol/**'
+      - 'internal/directterminal/**'
+      - 'internal/transport/**'
+      - 'internal/gateway/**'
+      - 'internal/app/desktop_terminal.go'
+      - 'internal/app/server.go'
+      - '.github/workflows/desktop-macos.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-macos-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Apple Silicon tests and Universal DMG
+    runs-on: macos-15
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/mygo/natives
+          key: mygo-macos-universal-${{ hashFiles('desktop/go.sum', 'desktop/third_party/mygo-terminal/mygo-plugin.json') }}
+      - name: Format, vet and packaging guards
+        run: |
+          test -z "$(git ls-files '*.go' | xargs gofmt -l)"
+          go vet ./...
+          python3 scripts/test_package_macos.py
+      - name: Build Universal app and DMG (ad-hoc, no Developer ID or notarization)
+        run: ./scripts/build-macos.sh
+      - name: Native ARM64 UI, terminal, Keychain and protocol tests
+        env:
+          HERDR_MACOS_INTEGRATION: '1'
+        run: |
+          export MYGO_GHOSTTY_VT="$PWD/build/darwin-universal/Herdr Desktop.app/Contents/Resources/libghostty-vt.dylib"
+          go test -count=1 -timeout=5m ./...
+      - name: Verify app, mounted DMG and source-bound metadata
+        run: python3 scripts/package-macos.py
+      - name: Install exact DMG and smoke test synthetic UI and PDF
+        run: |
+          python3 scripts/package-macos.py --source build/artifacts-macos-universal --verify-artifact 'build/installed-macos/Herdr Desktop.app'
+          python3 scripts/smoke-macos.py 'build/installed-macos/Herdr Desktop.app' build/macos-smoke-arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: herdr-desktop-macos-universal-${{ github.run_number }}
+          path: desktop/build/artifacts-macos-universal/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: herdr-desktop-macos-smoke-arm64-${{ github.run_number }}
+          path: desktop/build/macos-smoke-arm64/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  intel:
+    name: Intel tests against the same Universal DMG
+    needs: build
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: herdr-desktop-macos-universal-${{ github.run_number }}
+          path: desktop/build/artifacts-macos-universal/
+      - name: Verify and install exactly the ARM runner's DMG
+        run: python3 scripts/package-macos.py --source build/artifacts-macos-universal --verify-artifact 'build/installed-macos/Herdr Desktop.app'
+      - name: Native Intel UI, bundled terminal, Keychain and protocol tests
+        env:
+          HERDR_MACOS_INTEGRATION: '1'
+        run: |
+          export MYGO_GHOSTTY_VT="$PWD/build/installed-macos/Herdr Desktop.app/Contents/Resources/libghostty-vt.dylib"
+          go test -count=1 -timeout=5m ./...
+      - name: Smoke test installed app and native PDF
+        run: python3 scripts/smoke-macos.py 'build/installed-macos/Herdr Desktop.app' build/macos-smoke-amd64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: herdr-desktop-macos-smoke-amd64-${{ github.run_number }}
+          path: desktop/build/macos-smoke-amd64/
+          if-no-files-found: ignore
+          retention-days: 7

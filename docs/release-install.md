@@ -57,8 +57,16 @@ sh herdr-link-desktop-@VERSION@-linux-amd64-install.sh herdr-link-desktop-@VERSI
 
 需图形桌面、GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。安装器仍使用原 `herdr-desktop` 命令与数据目录。卸载程序可运行同一安装脚本加 `--uninstall`，保留配对数据。
 
+## macOS 桌面
+
+下载 `herdr-link-desktop-@VERSION@-macos-universal.dmg`，用 `shasum -a 256 文件名.dmg` 与清单对照。支持 Apple Silicon / Intel，最低系统版本声明为 macOS 12；CI 验证环境为 macOS 15。
+
+打开 DMG，把完整 `Herdr Desktop.app` 拖到 Applications 后启动，无需 Go/Xcode。它是 ad-hoc 签名的预览包，没有 Developer ID 签名或 Apple 公证。若系统阻止打开，仅在确认来源可信后使用“系统设置 → 隐私与安全性 → 仍要打开”；不要关闭系统的全局安全检查。企业策略可能禁止放行。
+
+更新前退出旧 App，替换应用本身，保留 Keychain 和用户配置中的 `Herdr Desktop/state.enc`。包内不包含个人配对、草稿或服务器密钥。
+
 ## 配对
 
 在 Client 中“添加电脑”，粘贴 Relay 生成的 `herdr-tcp://` 邀请。每个 Client 独立配对。Gateway 的 `herdr-gateway://` 接入码是给电脑 Relay 的，不要填入 Client。
 
-Linux 同用户的本机 Relay 可用“查找本机 Relay”连接。macOS 当前没有签名／公证安装包。
+Linux 同用户的本机 Relay 可用“查找本机 Relay”连接。macOS 本机 Relay 自动发现尚未接入，使用远程配对邀请。

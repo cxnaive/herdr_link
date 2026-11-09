@@ -2,7 +2,7 @@
 
 Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。通过 Relay 连接多台 Herdr 电脑，提供对话、审批、交互终端和工作区文件面板。
 
-当前版本 **0.3.1 开发预览**。系统结构与服务端安装见[项目首页](../README.md)。
+当前版本 **0.3.2 开发预览**。系统结构与服务端安装见[项目首页](../README.md)。
 
 <!-- desktop-downloads:start -->
 ## 下载
@@ -55,7 +55,14 @@ sh herdr-link-desktop-0.3.1-linux-amd64-install.sh herdr-link-desktop-0.3.1-linu
 
 ## macOS
 
-目前需[源码构建](#源码构建)，没有已签名、公证的安装包。构建目标 `darwin/universal` 包含 Intel 和 Apple silicon；签名、公证和实际分发需在 Mac 完成。
+0.3.2 增加 **macOS 12+ Universal DMG 预览包**，同一应用包含 Apple Silicon 和 Intel。正式发布完成后使用上方下载区；日常构建在 `desktop-macos` Actions 的 `herdr-desktop-macos-universal-<运行编号>` 附件中，保留 7 天。
+
+1. 核对同一发布的 `SHA256SUMS.txt`：Mac 可用 `shasum -a 256 文件名.dmg` 对照。
+2. 打开 DMG，将完整的 `Herdr Desktop.app` 拖到 **Applications（应用程序）**，弹出磁盘映像后启动；无需安装 Go 或 Xcode。
+3. 这是 **ad-hoc 签名、未使用 Developer ID、未经 Apple 公证**的预览包。首次打开若被阻止，仅在确认下载来源可信且校验一致后，按系统提示进入“系统设置 → 隐私与安全性 → 仍要打开”。企业管理策略可能禁止例外；不要关闭全局安全检查。
+4. 每个客户端用自己的 `herdr-tcp://` 邀请配对；安装包不包含任何用户凭据。覆盖升级前退出旧 App，保留 Keychain 与应用数据。
+
+CI 在 macOS 15 的 Apple Silicon / Intel 原生 runner 上运行测试，并安装验证**同一 DMG**的 App 启动、终端和 PDF；最低系统版本声明为 12，旧系统及完整人工交互仍需额外验收。此包是远程客户端，不代表 Mac 本机 Relay 发现或 Codex 进程绑定获得支持。
 
 ## 配对与使用
 
@@ -114,10 +121,13 @@ python3 scripts/package-linux.py
 
 ```sh
 cd desktop
-go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
+./scripts/build-macos.sh
+python3 scripts/package-macos.py
 ```
 
 对生成的可执行文件加 `--demo` 可使用虚构数据查看界面，不读取真实配对。构建输出位于 `desktop/build/`；运行时保留同目录资源。
+
+在 Mac 上运行上述脚本会生成 `build/darwin-universal/Herdr Desktop.app` 和 `.dmg`；收集后的 DMG、元数据与校验和位于 `build/artifacts-macos-universal/`。构建时使用 ad-hoc 签名，不需要 Developer ID 密钥，也不进行公证。
 
 ### 测试
 

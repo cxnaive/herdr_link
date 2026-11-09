@@ -36,6 +36,7 @@ def assets(version):
         "relay": f"{prefix}relay-{version}-linux-amd64.tar.gz",
         "gateway": f"{prefix}gateway-{version}-linux-amd64.tar.gz",
         "windows": f"{prefix}desktop-{version}-windows-amd64.zip",
+        "macos": f"{prefix}desktop-{version}-macos-universal.dmg",
         "linux-tar": f"{prefix}desktop-{version}-linux-amd64.tar.gz",
         "linux-deb": f"{prefix}desktop-{version}-linux-amd64.deb",
         "linux-install": f"{prefix}desktop-{version}-linux-amd64-install.sh",
@@ -102,6 +103,36 @@ def windows_info(path, version, sha, run_id):
         return info
 
 
+def validate_macos(path, info, version, sha, run_id):
+    provenance(info, version, sha, run_id)
+    require(info['platform'] == 'darwin/universal' and info['architectures'] == ['arm64', 'x86_64'], "Wrong macOS target")
+    require(info['signed'] is False and info['signing'] == 'ad-hoc' and info['notarized'] is False, "Wrong macOS signing declaration")
+    require(info['source_dirty'] is False and info['minimum_macos'] == '12.0', "Wrong macOS build policy")
+    require(len(info['files']) == 1 and info['files'][0]['file'] == f'herdr-desktop-{version}.dmg', "Unexpected macOS files")
+    record = info['files'][0]
+    require(path.stat().st_size == record['bytes'] and digest(path) == record['sha256'], "macOS provenance mismatch")
+    with path.open('rb') as stream:
+        require(path.stat().st_size >= 512, "Truncated DMG")
+        stream.seek(-512, 2)
+        require(stream.read(4) == b'koly', "Not a UDIF disk image")
+    app = info['app_files']
+    for name in ('Contents/Info.plist', 'Contents/MacOS/Herdr Desktop', 'Contents/Resources/libghostty-vt.dylib'):
+        require(name in app, "Missing macOS app metadata")
+    for name, record in app.items():
+        member = PurePosixPath(name)
+        require(not member.is_absolute() and '..' not in member.parts and str(member) == name, "Unsafe macOS app path")
+        require(type(record['size']) is int and record['size'] > 0 and re.fullmatch(r'[0-9a-f]{64}', record['sha256']) and type(record['executable']) is bool, "Invalid macOS app record")
+    require(app['Contents/MacOS/Herdr Desktop']['executable'], "Mac executable permission missing")
+    return info
+
+
+def macos_info(directory, version, sha, run_id):
+    name = f'herdr-desktop-{version}.dmg'
+    V.verify_checksums(directory, [name, 'BUILD-INFO.json', 'SHA256SUMS.txt'])
+    info = json.loads((directory / 'BUILD-INFO.json').read_text())
+    return validate_macos(directory / name, info, version, sha, run_id)
+
+
 def assemble(inputs, output):
     manifest = json.loads((ROOT / 'VERSION.json').read_text())
     version = project_version(manifest)
@@ -152,6 +183,9 @@ def assemble(inputs, output):
     sources['windows'] = windows / f'Herdr-Desktop-{version}-windows-amd64.zip'
     V.verify_checksums(windows, [sources['windows'].name, 'SHA256SUMS.txt'])
     wi = windows_info(sources['windows'], version, sha, run_id)
+    macos = one_directory(inputs, 'herdr-desktop-macos-universal-*')
+    mi = macos_info(macos, version, sha, run_id)
+    sources['macos'] = macos / f'herdr-desktop-{version}.dmg'
     output.mkdir(parents=True)
     records = {}
     for key, name in assets(version).items():
@@ -160,7 +194,7 @@ def assemble(inputs, output):
     install = (ROOT / 'docs/release-install.md').read_text().replace('@VERSION@', version)
     (output / 'INSTALL.md').write_text(install)
     info = {'schema': 2, 'project': manifest['project'], 'version': version, 'revision': sha, 'build_run_id': run_id, 'artifacts': records,
-            'producers': {'android': ai, 'native': native_records, 'linux': linux_records, 'windows': wi}}
+            'producers': {'android': ai, 'native': native_records, 'linux': linux_records, 'windows': wi, 'macos': mi}}
     write_json(output / 'BUILD-INFO.json', info)
     (output / 'SHA256SUMS.txt').write_text(''.join(f'{digest(p)}  {p.name}\n' for p in sorted(output.iterdir())))
     verify_bundle(output, manifest, sha, run_id)
@@ -175,6 +209,7 @@ def verify_bundle(directory, manifest, sha, run_id, inspect_apks=False):
     require(set(info['artifacts']) == set(assets(version).values()), "Wrong project file set")
     for name, r in info['artifacts'].items():
         require(files[name] == {'size': r['size'], 'digest': 'sha256:' + r['sha256']}, "Project metadata mismatch")
+    validate_macos(directory / assets(version)['macos'], info['producers']['macos'], version, sha, run_id)
     if inspect_apks:
         tools = Path(os.environ['ANDROID_HOME']) / 'build-tools/35.0.0'
         for abi in V.ABIS:

@@ -6,7 +6,7 @@
 
 - `check.yml` 按变更组件执行 Go、Shell / 打包工具或前端检查。
 - `build-artifacts.yml` 自动构建受影响的 Relay / Gateway 和 Android，不发布或部署。
-- `desktop-windows.yml` / `desktop-linux.yml` 在相关变更时验证并生成平台预览包，也可被统一发布构建复用。
+- `desktop-windows.yml` / `desktop-linux.yml` / `desktop-macos.yml` 在相关变更时验证并生成平台预览包，也可被统一发布构建复用。
 - 完整 race、浏览器和设备资格验证手动运行 `check.yml`，设置 `full=true`，不强制每次 push 都运行。
 
 Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端隔离配对测试、桌面 GTK / PDF / 钥匙环测试，并校验 ELF 架构、终端库散列和 Debian 架构字段。统一 Release 缺少任何一个架构的产物都会失败。
@@ -22,6 +22,7 @@ Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端
 | Relay / Gateway · Linux x86_64 | `build-artifacts` | `native-bundles-linux_amd64` |
 | Relay / Gateway · Linux ARM64 | `build-artifacts` | `native-bundles-linux_arm64` |
 | Android | `build-artifacts` | **`android-apks-signed`**，按手机 ABI 选择 APK |
+| macOS Apple Silicon / Intel | `desktop-macos` | `herdr-desktop-macos-universal-<运行编号>`，包含 DMG / 校验和 / 构建元数据 |
 | Windows x86_64 | `desktop-windows` | `herdr-desktop-windows-amd64-<运行编号>` |
 | Linux x86_64 / ARM64 | `desktop-linux` | `herdr-desktop-linux-<amd64 或 arm64>-<运行编号>` |
 
@@ -48,6 +49,7 @@ gh workflow run build-artifacts.yml --ref feat/android-file-companion -f compone
 - Linux x86_64 / ARM64 Relay / Gateway 完整包并执行隔离启动、注册和配对测试。
 - Android 三种 ABI，使用现有固定签名。
 - Windows 原生界面 / 终端测试与便携 ZIP。
+- macOS Universal DMG：Apple Silicon runner 构建和 ad-hoc 签名，Intel runner 下载并验证相同 DMG；两端运行原生测试、Keychain、App / PDF 启动检查。缺少任何一端成功结果，整套发布不会汇总。
 - Linux 桌面包、GTK / 钥匙环 / PDF smoke test，以及真实本机 Relay 连接测试。
 
 最后汇总为 `herdr-link-release` CI 附件。汇总只重命名并复制原制品字节，不编译或重新签名；发布下载统一使用 `herdr-link-<组件>-<版本>-<平台>`。Debug APK 留在 CI，不混入用户 Release。
@@ -78,7 +80,7 @@ Android 签名只在可信分支的 `android-signing` 环境中执行，密钥�
 
 继续使用四个既有环境 secrets：`HERDR_ANDROID_KEYSTORE_BASE64`、`HERDR_ANDROID_KEYSTORE_PASSWORD`、`HERDR_ANDROID_KEY_ALIAS`、`HERDR_ANDROID_KEY_PASSWORD`。不要为修复 CI 更换签名证书。
 
-“Release APK”指构建类型，仍沿用 Pocket 原来的调试证书；不代表 Play 商店签名。桌面包目前未签名，macOS 暂无签名／公证 Release 包。安装边界必须在发布说明中如实注明。
+“Release APK”指构建类型，仍沿用 Pocket 原来的调试证书；不代表 Play 商店签名。Windows / Linux 桌面包目前未签名；macOS DMG 中的 App 为 ad-hoc 签名，未使用 Developer ID，未经 Apple 公证。macOS CI 不读取 Apple 签名凭据；最低版本声明为 12，原生验证环境为 macOS 15，不等于旧系统或全部人工交互已验收。安装边界必须在发布说明中如实注明。
 
 ## 旧版本清理
 

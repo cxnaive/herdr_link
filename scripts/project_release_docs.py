@@ -54,6 +54,9 @@ def download_blocks(record):
 桌面程序目前未签名；Linux 需要 GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。各端共享项目版本，不表示所有平台已完成同等范围的验证。'''
     if f'herdr-link-desktop-{version}-linux-arm64.deb' in record.get('assets', {}):
         desktop = desktop.replace('| macOS |', f'| Debian / Ubuntu ARM64 | [Debian 包]({base}/herdr-link-desktop-{version}-linux-arm64.deb)，使用 `sudo apt install ./文件名.deb` |\n| Linux ARM64 用户安装 | [归档]({base}/herdr-link-desktop-{version}-linux-arm64.tar.gz) + [安装脚本]({base}/herdr-link-desktop-{version}-linux-arm64-install.sh) |\n| macOS |')
+    if f'herdr-link-desktop-{version}-macos-universal.dmg' in record.get('assets', {}):
+        desktop = desktop.replace('| macOS | 暂无签名、公证的下载包，使用下方源码构建路径 |', f'| macOS 12+ · Apple Silicon / Intel | [Universal DMG]({base}/herdr-link-desktop-{version}-macos-universal.dmg)，将 App 拖入 Applications |')
+        desktop = desktop.replace('桌面程序目前未签名；', 'Windows / Linux 桌面未签名；macOS 为 ad-hoc 签名预览包，未经 Developer ID 签名或 Apple 公证，首次打开可能需在系统设置中确认；')
     return {'native-downloads': native, 'android-downloads': android, 'desktop-downloads': desktop}
 
 

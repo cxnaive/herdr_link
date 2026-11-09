@@ -5,12 +5,12 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-09
+
 ### Added
+- macOS Universal DMG desktop preview for Apple Silicon and Intel, with ad-hoc signing and no Apple notarization. Install the complete app without Go or Xcode; first launch may require explicit approval in macOS Privacy & Security.
 - Show per-computer running and waiting Agent counts in Android and Windows/Linux desktop groups, independent of search and collapse. Exclude terminal-only panels and mark offline or unconfirmed state instead of presenting stale running counts.
 - Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.
-
-### Changed
-- Consolidate Relay, Gateway, Android and desktop into Herdr Link with one semantic project version and one release download page. Preserve existing Android signing identity and all application/service data paths.
 
 ### Fixed
 - Keep retained Herdr terminal panels accessible after an Agent exits. List them as terminals without reusing the exited Agent's conversation identity; Android and desktop open them in terminal mode.

@@ -76,6 +76,14 @@ class ProjectReleaseTests(unittest.TestCase):
             for r in records: z.writestr(r['file'], r['file'])
             z.writestr('BUILD-INFO.json', json.dumps(info)); z.writestr('SHA256SUMS.txt', '')
         sums(wd)
+        md = self.inputs / 'herdr-desktop-macos-universal-5'; md.mkdir()
+        dmg = md / 'herdr-desktop-0.3.0.dmg'; dmg.write_bytes(b'fixture' + b'koly' + b'\0' * 508)
+        files = {name: {'size': 64, 'sha256': 'd' * 64, 'executable': True} for name in ('Contents/Info.plist', 'Contents/MacOS/Herdr Desktop', 'Contents/Resources/libghostty-vt.dylib')}
+        info = {'version': '0.3.0', 'revision': SHA, 'run_id': str(RUN), 'source_dirty': False,
+                'platform': 'darwin/universal', 'architectures': ['arm64', 'x86_64'], 'minimum_macos': '12.0',
+                'signed': False, 'signing': 'ad-hoc', 'notarized': False, 'app_files': files,
+                'files': [{'file': dmg.name, 'bytes': dmg.stat().st_size, 'sha256': P.digest(dmg)}]}
+        (md / 'BUILD-INFO.json').write_text(json.dumps(info)); sums(md)
 
     def assemble(self):
         with patch.object(P, 'ROOT', self.root), patch.dict(os.environ, {'GITHUB_SHA': SHA, 'GITHUB_RUN_ID': str(RUN)}), patch.object(P.subprocess, 'check_output', return_value=SHA):
@@ -111,7 +119,7 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_assemble_exact_bytes_release_only_and_checksums(self):
         out = self.assemble()
         self.assertEqual(set(p.name for p in out.iterdir()), set(P.file_names('0.3.0')))
-        self.assertEqual(len(P.file_names('0.3.0')), 17)
+        self.assertEqual(len(P.file_names('0.3.0')), 18)
         self.assertFalse(any('debug' in p.name or 'codexfix' in p.name for p in out.iterdir()))
         self.assertEqual((out / P.assets('0.3.0')['android-arm64-v8a']).read_bytes(), (self.inputs / 'android-apks-signed/Herdr-Pocket-0.3.0-release-arm64-v8a.apk').read_bytes())
         self.assertEqual((out / 'INSTALL.md').read_text(), 'Install 0.3.0')
@@ -205,6 +213,55 @@ class ProjectReleaseTests(unittest.TestCase):
             separator = '-' if suffix == 'install.sh' else '.'
             self.assertIn('herdr-link-desktop-0.3.1-linux-arm64' + separator + suffix, blocks['desktop-downloads'])
 
+    def test_macos_producer_is_required_and_source_bound(self):
+        path = self.inputs / 'herdr-desktop-macos-universal-5/BUILD-INFO.json'
+        before = path.read_text()
+        for key, value in [('revision', 'c' * 40), ('run_id', '999'), ('source_dirty', True),
+                           ('platform', 'darwin/arm64'), ('architectures', ['arm64']), ('notarized', True),
+                           ('signed', True), ('signing', 'developer-id')]:
+            info = json.loads(before); info[key] = value
+            path.write_text(json.dumps(info)); sums(path.parent)
+            with self.subTest(key=key), self.assertRaises(ValueError): self.assemble()
+            self.assertFalse((self.root / 'out').exists())
+        path.write_text(before); sums(path.parent)
+        path.parent.rename(self.inputs / 'missing-mac')
+        with self.assertRaisesRegex(ValueError, 'Missing or ambiguous producer'): self.assemble()
+
+    def test_macos_publisher_revalidates_dmg_and_provenance(self):
+        out = self.assemble()
+        path = out / 'BUILD-INFO.json'
+        info = json.loads(path.read_text()); info['producers']['macos']['notarized'] = True
+        path.write_text(json.dumps(info)); sums(out)
+        with self.assertRaisesRegex(ValueError, 'signing declaration'):
+            P.verify_bundle(out, MANIFEST, SHA, RUN)
+
+    def test_macos_requires_disk_image_not_renamed_arbitrary_bytes(self):
+        directory = self.inputs / 'herdr-desktop-macos-universal-5'
+        dmg = directory / 'herdr-desktop-0.3.0.dmg'
+        dmg.write_bytes(b'x' * 600)
+        path = directory / 'BUILD-INFO.json'; info = json.loads(path.read_text())
+        info['files'][0].update(bytes=600, sha256=P.digest(dmg))
+        path.write_text(json.dumps(info)); sums(directory)
+        with self.assertRaisesRegex(ValueError, 'UDIF'): self.assemble()
+
+    def test_macos_downloads_only_appear_after_verified_publication(self):
+        record = {'version': '0.3.2', 'tag': 'v0.3.2'}
+        self.assertNotIn('macos-universal.dmg', D.download_blocks(record)['desktop-downloads'])
+        record['assets'] = {P.assets('0.3.2')['macos']: {}}
+        block = D.download_blocks(record)['desktop-downloads']
+        self.assertIn('herdr-link-desktop-0.3.2-macos-universal.dmg', block)
+        self.assertIn('ad-hoc', block)
+        self.assertIn('未经 Developer ID 签名或 Apple 公证', block)
+
+    def test_macos_workflow_validates_same_dmg_on_both_architectures(self):
+        workflow = (ROOT / '.github/workflows/desktop-macos.yml').read_text()
+        for expected in ['runs-on: macos-15\n', 'runs-on: macos-15-intel', 'needs: build',
+                         'workflow_call:', '--verify-artifact', 'scripts/smoke-macos.py', 'HERDR_MACOS_INTEGRATION']:
+            self.assertIn(expected, workflow)
+        self.assertNotIn('secrets.', workflow)
+        self.assertNotIn('release upload', workflow)
+        self.assertEqual(workflow.count('run: ./scripts/build-macos.sh'), 1)
+
     def test_dry_run_never_mutates_release(self):
         with patch.object(P, 'load_plan', return_value={}), patch.object(P, 'inspect', return_value=None), patch.object(P, 'api') as api:
             P.promote(self.root, False)
@@ -241,7 +298,7 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_workflow_assembles_on_builder_and_never_builds_on_publisher(self):
         producer = (ROOT / '.github/workflows/build-artifacts.yml').read_text()
         self.assertIn('inputs.components == \'release\'', producer)
-        self.assertIn('needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release]', producer)
+        self.assertIn('needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release, desktop-macos-release]', producer)
         self.assertIn('project_release.py assemble', producer)
         workflow = (ROOT / '.github/workflows/publish-components.yml').read_text()
         self.assertIn('project_release.py prepare', workflow)

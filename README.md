@@ -286,14 +286,11 @@ python3 scripts/package-linux.py
 
 ### macOS · Herdr Desktop
 
-目前仅提供源码构建路径，没有已签名、公证的安装包。在 Go **1.27.3** 环境下构建 universal 版本：
+0.3.2 增加 macOS 12+ **Universal DMG 预览包**，同时包含 Apple Silicon 和 Intel。发布完成后的下载见上方客户端表格；安装时将完整 App 拖入 Applications，无需安装开发工具。
 
-```sh
-cd desktop
-go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
-```
+DMG 内应用只有 ad-hoc 签名，**没有 Developer ID 签名或 Apple 公证**。首次启动可能需要确认来源后在“系统设置 → 隐私与安全性”中选择“仍要打开”；不建议关闭全局安全检查。完整安装、CI 验证范围及[源码构建说明](desktop/README.md#macos)见桌面文档。
 
-从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.3.1 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
+Windows / Linux / macOS 桌面客户端当前均为 **0.3.2 开发预览**；macOS CI 使用 macOS 15 原生 Apple Silicon / Intel runner，不表示所有旧版系统和交互场景已完成验证。
 
 ## 安全与运维
 

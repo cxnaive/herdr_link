@@ -260,10 +260,14 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
     uses: ./.github/workflows/desktop-windows.yml
 
+  desktop-macos-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
+    uses: ./.github/workflows/desktop-macos.yml
+
   project-release-bundle:
     name: Assemble Herdr Link release (exact CI bytes)
     if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
-    needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release]
+    needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release, desktop-macos-release]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

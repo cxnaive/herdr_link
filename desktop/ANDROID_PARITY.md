@@ -51,7 +51,7 @@
 | P2 | 语音、扫码 | 尚无本机 TTS、二维码图片识别；支持粘贴邀请 |
 | 服务端限制 | 独立 Codex 设置 | `--no-daemon` 不公开外部设置端点时显示 Relay 原因，需在终端修改 |
 | 服务端限制 | 编辑文件、续传 | Relay 未公开 `workspace_file_write`，Android 的禁用入口不算可用功能；两端均无断点续传 |
-| 平台验证 | macOS | 已交叉构建 Apple silicon / Intel universal；系统通知、文件选择/拖放/剪贴板和终端仍需 Mac 实机验收 |
+| 平台验证 | macOS | 0.3.2 增加 Universal DMG 与 macOS 15 Apple Silicon / Intel 原生 CI：同一 DMG 的安装、启动、终端、Keychain 与 PDF 检查；系统通知、文件选择/拖放/剪贴板、旧系统和完整人工交互仍需实机验收 |
 
 ## 桌面布局与验证
 
