@@ -39,6 +39,11 @@ def assets(version):
         "linux-tar": f"{prefix}desktop-{version}-linux-amd64.tar.gz",
         "linux-deb": f"{prefix}desktop-{version}-linux-amd64.deb",
         "linux-install": f"{prefix}desktop-{version}-linux-amd64-install.sh",
+        "relay-arm64": f"{prefix}relay-{version}-linux-arm64.tar.gz",
+        "gateway-arm64": f"{prefix}gateway-{version}-linux-arm64.tar.gz",
+        "linux-arm64-tar": f"{prefix}desktop-{version}-linux-arm64.tar.gz",
+        "linux-arm64-deb": f"{prefix}desktop-{version}-linux-arm64.deb",
+        "linux-arm64-install": f"{prefix}desktop-{version}-linux-arm64-install.sh",
     }
 
 
@@ -59,7 +64,7 @@ def provenance(info, version, sha, run_id=None):
         require(str(info["run_id"]) == str(run_id), "Mixed producer run IDs")
 
 
-def native_info(path, component, version, sha):
+def native_info(path, component, version, sha, arch="amd64"):
     with tarfile.open(path) as bundle:
         members = bundle.getmembers()
         require(len(members) < 10000 and sum(m.size for m in members) < 256 * 1024 * 1024, "Oversized native package")
@@ -71,9 +76,13 @@ def native_info(path, component, version, sha):
         require(len(records) == 1, "Ambiguous native metadata")
         info = json.load(bundle.extractfile(records[0]))
         provenance(info, version, sha)
-        require(info['component'] == component and info['target'] == 'linux/amd64' and info['cgo_enabled'] is False, "Wrong native target")
+        require(info['component'] == component and info['target'] == f'linux/{arch}' and info['cgo_enabled'] is False, "Wrong native target")
         binary = str(PurePosixPath(records[0].name).parent / component)
         with bundle.extractfile(binary) as stream:
+            header = stream.read(64)
+            require(len(header) == 64 and header[:6] == b'\x7fELF\x02\x01' and
+                    int.from_bytes(header[18:20], 'little') == {'amd64': 62, 'arm64': 183}[arch], "Wrong native ELF architecture")
+            stream.seek(0)
             require(V.hashlib.file_digest(stream, 'sha256').hexdigest() == info['binary_sha256'], "Native binary mismatch")
         return info
 
@@ -117,22 +126,28 @@ def assemble(inputs, output):
         require(r['build_type'] == 'release' and r['abi'] == abi and r['signing'] == 'existing-installation' and r['certificate_sha256'] == manifest['android']['signing_certificate_sha256'], "Wrong APK identity/signing")
         require(digest(android / name) == r['sha256'], "APK digest mismatch")
         sources['android-' + abi] = android / name
-    native = one_directory(inputs, 'native-bundles-linux_amd64')
-    V.verify_checksums(native, V.specifications(manifest, ['native'])['native']['names'])
-    native_records = {}
-    for key, binary in [('relay', 'herdr-mobile-relay'), ('gateway', 'herdr-gateway')]:
-        sources[key] = native / f'{binary}_{version}_linux_amd64.tar.gz'
-        native_records[key] = native_info(sources[key], binary, version, sha)
-    linux = one_directory(inputs, 'herdr-desktop-linux-amd64-*')
-    li = json.loads((linux / 'BUILD-INFO.json').read_text())
-    provenance(li, version, sha, run_id)
-    require(li['platform'] == 'linux/amd64' and li['signed'] is False, "Wrong Linux platform")
-    expected_linux = {f'herdr-desktop-{version}-linux-amd64.tar.gz', f'herdr-desktop_{version}_amd64.deb', 'install.sh'}
-    require({r['file'] for r in li['files']} == expected_linux and len(li['files']) == 3, "Unexpected Linux files")
-    V.verify_checksums(linux, expected_linux | {'SHA256SUMS.txt', 'BUILD-INFO.json'})
-    for record in li['files']:
-        require(digest(linux / record['file']) == record['sha256'], "Linux provenance mismatch")
-    sources.update({'linux-tar': linux / f'herdr-desktop-{version}-linux-amd64.tar.gz', 'linux-deb': linux / f'herdr-desktop_{version}_amd64.deb', 'linux-install': linux / 'install.sh'})
+    native_records, linux_records = {}, {}
+    for arch in ('amd64', 'arm64'):
+        native = one_directory(inputs, f'native-bundles-linux_{arch}')
+        native_names = {f'{binary}_{version}_linux_{arch}.tar.gz' for binary in ('herdr-mobile-relay', 'herdr-gateway')}
+        V.verify_checksums(native, native_names | {'SHA256SUMS.txt'})
+        for component, binary in [('relay', 'herdr-mobile-relay'), ('gateway', 'herdr-gateway')]:
+            key = component if arch == 'amd64' else component + '-' + arch
+            sources[key] = native / f'{binary}_{version}_linux_{arch}.tar.gz'
+            native_records[key] = native_info(sources[key], binary, version, sha, arch)
+        linux = one_directory(inputs, f'herdr-desktop-linux-{arch}-*')
+        li = json.loads((linux / 'BUILD-INFO.json').read_text())
+        provenance(li, version, sha, run_id)
+        require(li['platform'] == f'linux/{arch}' and li['signed'] is False, "Wrong Linux platform")
+        expected_linux = {f'herdr-desktop-{version}-linux-{arch}.tar.gz', f'herdr-desktop_{version}_{arch}.deb', 'install.sh'}
+        require({r['file'] for r in li['files']} == expected_linux and len(li['files']) == 3, "Unexpected Linux files")
+        V.verify_checksums(linux, expected_linux | {'SHA256SUMS.txt', 'BUILD-INFO.json'})
+        for record in li['files']:
+            require(digest(linux / record['file']) == record['sha256'], "Linux provenance mismatch")
+        prefix = 'linux' if arch == 'amd64' else 'linux-' + arch
+        sources.update({prefix + '-tar': linux / f'herdr-desktop-{version}-linux-{arch}.tar.gz',
+                        prefix + '-deb': linux / f'herdr-desktop_{version}_{arch}.deb', prefix + '-install': linux / 'install.sh'})
+        linux_records[arch] = li
     windows = one_directory(inputs, 'herdr-desktop-windows-amd64-*')
     sources['windows'] = windows / f'Herdr-Desktop-{version}-windows-amd64.zip'
     V.verify_checksums(windows, [sources['windows'].name, 'SHA256SUMS.txt'])
@@ -145,7 +160,7 @@ def assemble(inputs, output):
     install = (ROOT / 'docs/release-install.md').read_text().replace('@VERSION@', version)
     (output / 'INSTALL.md').write_text(install)
     info = {'schema': 2, 'project': manifest['project'], 'version': version, 'revision': sha, 'build_run_id': run_id, 'artifacts': records,
-            'producers': {'android': ai, 'native': native_records, 'linux': li, 'windows': wi}}
+            'producers': {'android': ai, 'native': native_records, 'linux': linux_records, 'windows': wi}}
     write_json(output / 'BUILD-INFO.json', info)
     (output / 'SHA256SUMS.txt').write_text(''.join(f'{digest(p)}  {p.name}\n' for p in sorted(output.iterdir())))
     verify_bundle(output, manifest, sha, run_id)

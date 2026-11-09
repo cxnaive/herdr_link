@@ -9,6 +9,8 @@
 - `desktop-windows.yml` / `desktop-linux.yml` 在相关变更时验证并生成平台预览包，也可被统一发布构建复用。
 - 完整 race、浏览器和设备资格验证手动运行 `check.yml`，设置 `full=true`，不强制每次 push 都运行。
 
+Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端隔离配对测试、桌面 GTK / PDF / 钥匙环测试，并校验 ELF 架构、终端库散列和 Debian 架构字段。统一 Release 缺少任何一个架构的产物都会失败。
+
 ## 准备版本
 
 1. `VERSION.json` 中 `project.version` 和四个组件版本统一为 `MAJOR.MINOR.PATCH`，并更新 `desktop/mygo.json`、Android `versionName`。
@@ -25,7 +27,7 @@ gh workflow run build-artifacts.yml --ref feat/android-file-companion -f compone
 
 等待这次构建全部成功。它在**同一次 run、同一个源码提交**中构建：
 
-- Linux x86_64 Relay / Gateway 完整包并执行隔离启动、注册和配对测试。
+- Linux x86_64 / ARM64 Relay / Gateway 完整包并执行隔离启动、注册和配对测试。
 - Android 三种 ABI，使用现有固定签名。
 - Windows 原生界面 / 终端测试与便携 ZIP。
 - Linux 桌面包、GTK / 钥匙环 / PDF smoke test，以及真实本机 Relay 连接测试。

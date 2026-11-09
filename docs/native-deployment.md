@@ -21,7 +21,7 @@
 
 ## 下载与校验
 
-从本仓库 Release 下载所需 Relay / Gateway 归档及同一版本的 `SHA256SUMS.txt`。需要尚未发布的管理功能时，选择 `build-artifacts` 成功运行中的 **`native-bundles-linux_amd64`**，不是 `native-binaries-*`。
+从本仓库 Release 下载所需 Relay / Gateway 归档及同一版本的 `SHA256SUMS.txt`。`uname -m` 为 `x86_64` 选择 amd64，为 `aarch64` 选择 arm64；下文 amd64 示例在 ARM64 机器上替换为 arm64。需要尚未发布的管理功能时，选择 `build-artifacts` 成功运行中的 **`native-bundles-linux_amd64` 或 `native-bundles-linux_arm64`**，不是 `native-binaries-*`。
 
 ```sh
 mkdir -p "$HOME/Downloads/herdr-native"

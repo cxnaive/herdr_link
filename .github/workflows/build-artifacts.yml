@@ -129,8 +129,16 @@ jobs:
   native-bundles:
     needs: changes
     if: needs.changes.outputs.native == 'true'
-    name: Native Linux amd64 bundles and smoke test
-    runs-on: ubuntu-24.04
+    name: Native Linux ${{ matrix.arch }} bundles and smoke test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -143,15 +151,15 @@ jobs:
           cache: true
 
       - name: Package installable Relay and Gateway bundles
-        run: scripts/package-native-release.sh dist/native-linux_amd64
+        run: scripts/package-native-release.sh dist/native-linux_${{ matrix.arch }}
 
       - name: Verify bundles and isolated startup and pairing
-        run: python3 scripts/check-native-release.py dist/native-linux_amd64
+        run: python3 scripts/check-native-release.py dist/native-linux_${{ matrix.arch }}
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: native-bundles-linux_amd64
-          path: dist/native-linux_amd64/
+          name: native-bundles-linux_${{ matrix.arch }}
+          path: dist/native-linux_${{ matrix.arch }}/
           if-no-files-found: error
           retention-days: 1
 

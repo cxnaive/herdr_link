@@ -1,5 +1,6 @@
 """Keep system-first documentation aligned with one verified project release."""
 import json
+import re
 from component_release_docs import replace_block
 
 REPO = 'cxnaive/herdr_link'
@@ -21,6 +22,13 @@ def download_blocks(record):
 [校验文件]({base}/SHA256SUMS.txt) · [安装说明]({base}/INSTALL.md) · [部署指南](docs/native-deployment.md)
 
 完整包包含可执行文件、配置和服务模板。ARM64 / macOS 服务端目前只有 CI 独立二进制，不属于本次完整部署包。'''
+    if f'herdr-link-relay-{version}-linux-arm64.tar.gz' in record.get('assets', {}):
+        native = native.replace('| 组件 | Linux x86_64 |', '| 组件 | Linux x86_64 | Linux ARM64 |').replace('| --- | --- |', '| --- | --- | --- |')
+        for component in ('relay', 'gateway'):
+            name = 'Relay' if component == 'relay' else 'Gateway'
+            old = f'| {name} | [下载部署包]({base}/herdr-link-{component}-{version}-linux-amd64.tar.gz) |'
+            native = native.replace(old, old + f' [下载部署包]({base}/herdr-link-{component}-{version}-linux-arm64.tar.gz) |')
+        native = native.replace('ARM64 / macOS 服务端目前只有 CI 独立二进制，不属于本次完整部署包。', '按系统架构选择 amd64（x86_64）或 arm64（aarch64）。macOS 服务端目前只有 CI 独立二进制。')
     android = f'''#### 下载 Android APK
 
 **[Herdr Link {tag} · Android]({page})** · Android 9 及以上
@@ -44,6 +52,8 @@ def download_blocks(record):
 | macOS | 暂无签名、公证的下载包，使用下方源码构建路径 |
 
 桌面程序目前未签名；Linux 需要 GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。各端共享项目版本，不表示所有平台已完成同等范围的验证。'''
+    if f'herdr-link-desktop-{version}-linux-arm64.deb' in record.get('assets', {}):
+        desktop = desktop.replace('| macOS |', f'| Debian / Ubuntu ARM64 | [Debian 包]({base}/herdr-link-desktop-{version}-linux-arm64.deb)，使用 `sudo apt install ./文件名.deb` |\n| Linux ARM64 用户安装 | [归档]({base}/herdr-link-desktop-{version}-linux-arm64.tar.gz) + [安装脚本]({base}/herdr-link-desktop-{version}-linux-arm64-install.sh) |\n| macOS |')
     return {'native-downloads': native, 'android-downloads': android, 'desktop-downloads': desktop}
 
 
@@ -57,5 +67,8 @@ def update(root, plan, receipt):
     for key, body in blocks.items(): readme = replace_block(readme, key, body)
     child = replace_block((root / 'herdr-android/README.md').read_text(), 'android-downloads', blocks['android-downloads'].replace('#### 下载 Android APK', '## 安装', 1))
     desktop = replace_block((root / 'desktop/README.md').read_text(), 'desktop-downloads', blocks['desktop-downloads'].replace('### 桌面客户端下载', '## 下载', 1))
+    version = metadata['release']['version']
+    readme = re.sub(r'herdr-link-desktop-[0-9]+\.[0-9]+\.[0-9]+-linux-', f'herdr-link-desktop-{version}-linux-', readme)
+    desktop = re.sub(r'herdr-link-desktop-[0-9]+\.[0-9]+\.[0-9]+-linux-', f'herdr-link-desktop-{version}-linux-', desktop)
     changes = {root / 'README.md': readme, root / 'herdr-android/README.md': child, root / 'desktop/README.md': desktop, root / 'VERSION.json': json.dumps(metadata, ensure_ascii=False, indent=2) + '\n'}
     for p, text in changes.items(): p.write_text(text)

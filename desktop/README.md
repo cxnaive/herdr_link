@@ -25,7 +25,9 @@ Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。�
 
 运行 `Herdr Desktop.exe`，保持 `ghostty-vt.dll` 与程序在同一目录。当前是未签名便携包；PDF 预览需要系统 WebView2。
 
-## Linux x86_64
+## Linux x86_64 / ARM64
+
+支持 amd64 与 arm64。运行 `uname -m`：`x86_64` 选择 amd64，`aarch64` 选择 arm64。以下安装命令以 amd64 为例，ARM64 用户替换文件名中的架构；源码构建脚本自动选择本机架构。
 
 从上方统一 Release 下载 Linux 安装文件和 `SHA256SUMS.txt`，执行 `sha256sum --ignore-missing -c SHA256SUMS.txt`。
 
@@ -47,7 +49,7 @@ sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linu
 
 需要 **GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**，例如 GNOME Keyring。`.deb` 声明库依赖，钥匙环仍需在桌面会话中运行；KWallet / KeePassXC 需启用 Secret Service。
 
-缺少钥匙环时不会降级为明文保存。纯 SSH、无图形会话的服务器不适合运行本客户端。Linux CI 验证环境为 Ubuntu 24.04 x86_64；其他发行版、ARM64 和不同桌面环境不视为已验证。
+缺少钥匙环时不会降级为明文保存。纯 SSH、无图形会话的服务器不适合运行本客户端。Linux CI 验证环境为 Ubuntu 24.04 x86_64 / ARM64；其他发行版和不同桌面环境不视为已验证。
 
 ## macOS
 
@@ -103,7 +105,7 @@ sudo apt install libgtk-3-0t64 libwebkit2gtk-4.1-0 libsecret-1-0 gnome-keyring
 cd desktop
 ./scripts/build-linux.sh
 python3 scripts/package-linux.py
-# 安装包：build/artifacts-linux-amd64/
+# 安装包：build/artifacts-linux-amd64/ 或 build/artifacts-linux-arm64/
 ```
 
 **macOS universal：**
@@ -120,7 +122,7 @@ go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-no
 在 `desktop/` 中先构建终端库，再运行 `go test ./...` 和 `go vet ./...`。Linux 可指定：
 
 ```sh
-MYGO_GHOSTTY_VT="$PWD/build/linux-amd64/libghostty-vt.so" go test ./...
+MYGO_GHOSTTY_VT="$PWD/build/linux-$(go env GOHOSTARCH)/libghostty-vt.so" go test ./...
 python3 scripts/test_package_linux.py
 ./scripts/smoke-linux.sh
 ```

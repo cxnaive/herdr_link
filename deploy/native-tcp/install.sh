@@ -6,10 +6,12 @@ cd "$(dirname "$0")"
 [ -f herdr-gateway ] && [ -f herdr-tcp-gateway.service ]
 # Derive the install directory from the verified bundle, never a stale template version.
 version=$(python3 - <<'PYVERSION'
-import hashlib, json, pathlib, re
+import hashlib, json, pathlib, platform, re
 info = json.loads(pathlib.Path("BUILD-INFO.json").read_text())
 version = info["version"]
-if (info.get("component") != "herdr-gateway" or info.get("target") != "linux/amd64"
+arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine())
+if (info.get("component") != "herdr-gateway" or info.get("target") != f"linux/{arch}"
+        or platform.system() != "Linux" or arch is None
         or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[+.-][A-Za-z0-9.-]+)?", version)
         or hashlib.sha256(pathlib.Path("herdr-gateway").read_bytes()).hexdigest() != info.get("binary_sha256")):
     raise SystemExit("Invalid Gateway bundle metadata or checksum")

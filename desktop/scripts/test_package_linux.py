@@ -19,14 +19,19 @@ class LinuxPackageTests(unittest.TestCase):
             header[:6] = b"\x7fELF\x02\x01"
             header[18:20] = (62).to_bytes(2, "little")
             path.write_bytes(header)
-            package.elf_amd64(path)
+            package.elf_arch(path, "amd64")
+            with self.assertRaises(ValueError):
+                package.elf_arch(path, "arm64")
+            with self.assertRaises(ValueError):
+                package.elf_arch(path, "riscv64")
             header[18:20] = (183).to_bytes(2, "little")
             path.write_bytes(header)
+            package.elf_arch(path, "arm64")
             with self.assertRaises(ValueError):
-                package.elf_amd64(path)
+                package.elf_arch(path, "amd64")
             path.write_bytes(b"MZ")
             with self.assertRaises(ValueError):
-                package.elf_amd64(path)
+                package.elf_arch(path, "amd64")
 
     def test_archive_requires_one_regular_matching_file(self):
         for kind in ("regular", "link", "duplicate", "missing", "not-executable"):

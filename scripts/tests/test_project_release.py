@@ -31,9 +31,12 @@ def sums(directory):
     (directory / 'SHA256SUMS.txt').write_text(''.join(f'{P.digest(p)}  {p.name}\n' for p in sorted(directory.iterdir()) if p.name != 'SHA256SUMS.txt'))
 
 
-def native(path, binary):
-    raw = b'fake native bytes'
-    info = {'version': '0.3.0', 'revision': SHA, 'component': binary, 'target': 'linux/amd64', 'cgo_enabled': False, 'binary_sha256': hashlib.sha256(raw).hexdigest()}
+def native(path, binary, arch="amd64"):
+    header = bytearray(64)
+    header[:6] = b'\x7fELF\x02\x01'
+    header[18:20] = {'amd64': 62, 'arm64': 183}[arch].to_bytes(2, 'little')
+    raw = bytes(header) + b'fake native bytes'
+    info = {'version': '0.3.0', 'revision': SHA, 'component': binary, 'target': f'linux/{arch}', 'cgo_enabled': False, 'binary_sha256': hashlib.sha256(raw).hexdigest()}
     with tarfile.open(path, 'w:gz') as z:
         for name, value in [('BUILD-INFO.json', json.dumps(info).encode()), (binary, raw)]:
             member = tarfile.TarInfo('package/' + name); member.size = len(value)
@@ -55,14 +58,17 @@ class ProjectReleaseTests(unittest.TestCase):
                 name = f'Herdr-Pocket-0.3.0-{kind}-{abi}.apk'; (android / name).write_bytes(name.encode())
                 records.append({'file': name, 'sha256': P.digest(android / name), 'build_type': kind, 'abi': abi, 'signing': 'existing-installation', 'certificate_sha256': CERT})
         (android / 'BUILD-INFO.json').write_text(json.dumps({'version': '0.3.0', 'revision': SHA, 'version_code': 35, 'artifacts': records})); sums(android)
-        nd = self.inputs / 'native-bundles-linux_amd64'; nd.mkdir()
-        for binary in ['herdr-mobile-relay', 'herdr-gateway']: native(nd / f'{binary}_0.3.0_linux_amd64.tar.gz', binary)
-        sums(nd)
-        ld = self.inputs / 'herdr-desktop-linux-amd64-5'; ld.mkdir()
-        records = []
-        for name in ['herdr-desktop-0.3.0-linux-amd64.tar.gz', 'herdr-desktop_0.3.0_amd64.deb', 'install.sh']:
-            (ld / name).write_bytes(name.encode()); records.append({'file': name, 'sha256': P.digest(ld / name)})
-        (ld / 'BUILD-INFO.json').write_text(json.dumps({'version': '0.3.0', 'revision': SHA, 'run_id': str(RUN), 'signed': False, 'platform': 'linux/amd64', 'files': records})); sums(ld)
+        for arch in ('amd64', 'arm64'):
+            nd = self.inputs / f'native-bundles-linux_{arch}'; nd.mkdir()
+            for binary in ['herdr-mobile-relay', 'herdr-gateway']:
+                native(nd / f'{binary}_0.3.0_linux_{arch}.tar.gz', binary, arch)
+            sums(nd)
+            ld = self.inputs / f'herdr-desktop-linux-{arch}-5'; ld.mkdir()
+            records = []
+            for name in [f'herdr-desktop-0.3.0-linux-{arch}.tar.gz', f'herdr-desktop_0.3.0_{arch}.deb', 'install.sh']:
+                (ld / name).write_bytes((arch + name).encode())
+                records.append({'file': name, 'sha256': P.digest(ld / name)})
+            (ld / 'BUILD-INFO.json').write_text(json.dumps({'version': '0.3.0', 'revision': SHA, 'run_id': str(RUN), 'signed': False, 'platform': f'linux/{arch}', 'files': records})); sums(ld)
         wd = self.inputs / 'herdr-desktop-windows-amd64-5'; wd.mkdir()
         records = [{'file': name, 'sha256': hashlib.sha256(name.encode()).hexdigest(), 'bytes': len(name)} for name in ['Herdr Desktop.exe', 'ghostty-vt.dll']]
         info = {'version': '0.3.0', 'revision': SHA, 'run_id': str(RUN), 'platform': 'windows/amd64', 'signed': False, 'files': records}
@@ -105,7 +111,7 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_assemble_exact_bytes_release_only_and_checksums(self):
         out = self.assemble()
         self.assertEqual(set(p.name for p in out.iterdir()), set(P.file_names('0.3.0')))
-        self.assertEqual(len(P.file_names('0.3.0')), 12)
+        self.assertEqual(len(P.file_names('0.3.0')), 17)
         self.assertFalse(any('debug' in p.name or 'codexfix' in p.name for p in out.iterdir()))
         self.assertEqual((out / P.assets('0.3.0')['android-arm64-v8a']).read_bytes(), (self.inputs / 'android-apks-signed/Herdr-Pocket-0.3.0-release-arm64-v8a.apk').read_bytes())
         self.assertEqual((out / 'INSTALL.md').read_text(), 'Install 0.3.0')
@@ -141,18 +147,63 @@ class ProjectReleaseTests(unittest.TestCase):
         blocks = '\n'.join(f'<!-- {key}:start -->old<!-- {key}:end -->' for key in ['native-downloads', 'android-downloads', 'desktop-downloads'])
         (self.root / 'README.md').write_text('# System\n## Clients\n' + gallery + '\n' + blocks)
         (self.root / 'herdr-android').mkdir(); (self.root / 'herdr-android/README.md').write_text(blocks)
-        (self.root / 'desktop/README.md').write_text(blocks)
+        (self.root / 'desktop/README.md').write_text(blocks + '\nsh herdr-link-desktop-0.2.9-linux-arm64-install.sh')
         plan = {'manifest': MANIFEST, 'source': SHA, 'build_run_id': RUN}
         receipt = {'tag': 'v0.3.0', 'release_id': 4, 'assets': {}}
         D.update(self.root, plan, receipt); before = (self.root / 'README.md').read_text()
         self.assertIn('## Clients\n' + gallery, before)
         self.assertNotIn('codexfix', before)
+        self.assertIn('sh herdr-link-desktop-0.3.0-linux-arm64-install.sh', (self.root / 'desktop/README.md').read_text())
         self.assertIn('herdr-link-desktop-0.3.0-windows-amd64.zip', before)
         D.update(self.root, plan, receipt); self.assertEqual(before, (self.root / 'README.md').read_text())
         version_before = (self.root / 'VERSION.json').read_bytes()
         (self.root / 'desktop/README.md').write_text('no markers')
         with self.assertRaises(ValueError): D.update(self.root, plan, receipt)
         self.assertEqual(version_before, (self.root / 'VERSION.json').read_bytes())
+
+    def test_arm64_is_required_and_metadata_must_match(self):
+        directory = self.inputs / 'native-bundles-linux_arm64'
+        directory.rename(self.inputs / 'wrong-producer')
+        with self.assertRaisesRegex(ValueError, 'Missing or ambiguous producer'):
+            self.assemble()
+        (self.inputs / 'wrong-producer').rename(directory)
+        path = directory / 'herdr-gateway_0.3.0_linux_arm64.tar.gz'
+        native(path, 'herdr-gateway', 'amd64'); sums(directory)
+        with self.assertRaisesRegex(ValueError, 'Wrong native target'):
+            self.assemble()
+
+    def test_native_elf_must_match_declared_arm64(self):
+        path = self.root / 'wrong-elf.tar.gz'
+        native(path, 'herdr-gateway', 'amd64')
+        with tarfile.open(path) as bundle:
+            records = [(m, bundle.extractfile(m).read()) for m in bundle.getmembers()]
+        with tarfile.open(path, 'w:gz') as bundle:
+            for member, data in records:
+                if member.name.endswith('BUILD-INFO.json'):
+                    info = json.loads(data); info['target'] = 'linux/arm64'
+                    data = json.dumps(info).encode(); member.size = len(data)
+                bundle.addfile(member, io.BytesIO(data))
+        with self.assertRaisesRegex(ValueError, 'Wrong native ELF architecture'):
+            P.native_info(path, 'herdr-gateway', '0.3.0', SHA, 'arm64')
+
+    def test_arm64_desktop_wrong_platform_is_rejected(self):
+        directory = self.inputs / 'herdr-desktop-linux-arm64-5'
+        path = directory / 'BUILD-INFO.json'
+        info = json.loads(path.read_text()); info['platform'] = 'linux/amd64'
+        path.write_text(json.dumps(info)); sums(directory)
+        with self.assertRaisesRegex(ValueError, 'Wrong Linux platform'):
+            self.assemble()
+
+    def test_arm64_downloads_only_appear_when_published(self):
+        record = {'version': '0.3.1', 'tag': 'v0.3.1'}
+        self.assertNotIn('linux-arm64.tar.gz', D.download_blocks(record)['native-downloads'])
+        record['assets'] = {name: {} for name in P.file_names('0.3.1')}
+        blocks = D.download_blocks(record)
+        for component in ('relay', 'gateway'):
+            self.assertIn(f'herdr-link-{component}-0.3.1-linux-arm64.tar.gz', blocks['native-downloads'])
+        for suffix in ('tar.gz', 'deb', 'install.sh'):
+            separator = '-' if suffix == 'install.sh' else '.'
+            self.assertIn('herdr-link-desktop-0.3.1-linux-arm64' + separator + suffix, blocks['desktop-downloads'])
 
     def test_dry_run_never_mutates_release(self):
         with patch.object(P, 'load_plan', return_value={}), patch.object(P, 'inspect', return_value=None), patch.object(P, 'api') as api:

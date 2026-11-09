@@ -55,7 +55,7 @@ def receive(sock, size):
     return value
 
 
-def extract(archive, work):
+def extract(archive, work, arch="amd64"):
     with tarfile.open(archive) as bundle:
         for member in bundle.getmembers():
             path = PurePosixPath(member.name)
@@ -64,10 +64,12 @@ def extract(archive, work):
         bundle.extractall(work)
     directory = work / archive.name[:-7]
     info = json.loads((directory / "BUILD-INFO.json").read_text())
-    require(info["target"] == "linux/amd64" and not info["cgo_enabled"], "Wrong build target")
+    require(info["target"] == f"linux/{arch}" and not info["cgo_enabled"], "Wrong build target")
     binary = directory / info["component"]
     require(hashlib.sha256(binary.read_bytes()).hexdigest() == info["binary_sha256"], "Binary digest mismatch")
-    require(binary.read_bytes()[:5] == b"\x7fELF\x02", "Expected a 64-bit ELF binary")
+    header = binary.read_bytes()[:64]
+    require(len(header) == 64 and header[:6] == b"\x7fELF\x02\x01" and
+            int.from_bytes(header[18:20], "little") == {"amd64": 62, "arm64": 183}[arch], "Wrong ELF architecture")
     require(os.access(binary, os.X_OK), "Binary lost its executable bit")
     return directory, info
 
@@ -76,7 +78,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     args = parser.parse_args()
-    require(platform.system() == "Linux" and platform.machine() == "x86_64", "Run on Linux x86_64")
+    arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine())
+    require(platform.system() == "Linux" and arch, "Run on Linux amd64 or arm64")
     archives = []
     for line in (args.directory / "SHA256SUMS.txt").read_text().splitlines():
         digest, name = line.split()
@@ -87,7 +90,7 @@ def main():
     require(len(archives) == 2, "Expected Relay and Gateway archives")
     with tempfile.TemporaryDirectory(prefix="herdr-native-smoke-") as temporary:
         work = Path(temporary)
-        bundles = [extract(p, work) for p in archives]
+        bundles = [extract(p, work, arch) for p in archives]
         relay, relay_info = next(b for b in bundles if b[1]["component"] == "herdr-mobile-relay")
         gateway, gateway_info = next(b for b in bundles if b[1]["component"] == "herdr-gateway")
         require(relay_info["revision"] == gateway_info["revision"], "Mixed source revisions")
@@ -168,7 +171,7 @@ def main():
                         proc.wait(timeout=15)
                     except subprocess.TimeoutExpired:
                         proc.kill(); proc.wait(timeout=5)
-        print("PASS: checksums, static Linux amd64 binaries, private config/init rejection, isolated Gateway/TCP/Relay registration and one-device pairing")
+        print(f"PASS: checksums, static Linux {arch} binaries, private config/init rejection, isolated Gateway/TCP/Relay registration and one-device pairing")
         print("Source:", relay_info["revision"])
         print("No production service, credential, real Herdr socket or phone was used; systemd itself was not installed.")
 

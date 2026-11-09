@@ -6,6 +6,7 @@ import io
 import json
 import os
 import posixpath
+import platform
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -24,11 +25,12 @@ def digest(path):
         return hashlib.file_digest(f, "sha256").hexdigest()
 
 
-def elf_amd64(path):
+def elf_arch(path, arch):
+    require(arch in ("amd64", "arm64"), "Unsupported Linux architecture")
     with path.open("rb") as f:
         header = f.read(64)
     require(len(header) == 64 and header[:6] == b"\x7fELF\x02\x01" and
-            int.from_bytes(header[18:20], "little") == 62, f"Not a Linux x86_64 ELF: {path.name}")
+            int.from_bytes(header[18:20], "little") == {"amd64": 62, "arm64": 183}[arch], f"Not a Linux {arch} ELF: {path.name}")
 
 
 def member_digest(bundle, name, executable=False):
@@ -39,18 +41,18 @@ def member_digest(bundle, name, executable=False):
         return hashlib.file_digest(f, "sha256").hexdigest()
 
 
-def verify(source, config):
+def verify(source, config, arch):
     slug, version = config["slug"], config["version"]
     executable, library = source / slug, source / "libghostty-vt.so"
     for path in (executable, library):
         require(path.is_file() and not path.is_symlink(), f"Missing built file: {path.name}")
-        elf_amd64(path)
+        elf_arch(path, arch)
     require(os.access(executable, os.X_OK), "Executable lost its execute permission")
     native = json.loads((ROOT / "third_party/mygo-terminal/mygo-plugin.json").read_text())
-    pin = next(lib["files"]["linux-amd64"] for lib in native["libraries"] if lib["name"] == "libghostty-vt")
+    pin = next(lib["files"][f"linux-{arch}"] for lib in native["libraries"] if lib["name"] == "libghostty-vt")
     require(digest(library) == pin["sha256"], "Terminal library differs from the pinned Linux build")
-    archive = source / f"{slug}-{version}-linux-amd64.tar.gz"
-    deb = source / f"{slug}_{version}_amd64.deb"
+    archive = source / f"{slug}-{version}-linux-{arch}.tar.gz"
+    deb = source / f"{slug}_{version}_{arch}.deb"
     with tarfile.open(archive) as bundle:
         for m in bundle.getmembers():
             p = PurePosixPath(m.name)
@@ -58,7 +60,7 @@ def verify(source, config):
         for path in (executable, library):
             require(member_digest(bundle, path.name, path == executable) == digest(path), "Portable archive contains stale binaries")
         require(member_digest(bundle, f"{slug}.desktop") == digest(source / f"{slug}.desktop"), "Desktop entry mismatch")
-    for field, expected in (("Package", slug), ("Version", version), ("Architecture", "amd64")):
+    for field, expected in (("Package", slug), ("Version", version), ("Architecture", arch)):
         value = subprocess.check_output(["dpkg-deb", "--field", str(deb), field], text=True).strip()
         require(value == expected, f"Wrong Debian {field}: {value}")
     depends = subprocess.check_output(["dpkg-deb", "--field", str(deb), "Depends"], text=True)
@@ -75,9 +77,9 @@ def verify(source, config):
     return [archive, deb, installer], {p.name: digest(p) for p in (executable, library)}
 
 
-def package(source, output):
+def package(source, output, arch):
     config = json.loads((ROOT / "mygo.json").read_text())
-    files, binaries = verify(source, config)
+    files, binaries = verify(source, config, arch)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=normal", "--", "."], cwd=ROOT))
     # Local previews can be tested without committing; CI assets must be source-bound.
@@ -87,7 +89,7 @@ def package(source, output):
     for path in files:
         shutil.copy2(path, output / path.name)
         records.append({"file": path.name, "bytes": path.stat().st_size, "sha256": digest(path)})
-    info = {"schema": 1, "version": config["version"], "platform": "linux/amd64", "revision": revision,
+    info = {"schema": 1, "version": config["version"], "platform": f"linux/{arch}", "revision": revision,
             "source_dirty": dirty, "run_id": os.environ.get("GITHUB_RUN_ID"), "event": os.environ.get("GITHUB_EVENT_NAME"),
             "signed": False, "binaries": binaries, "files": records}
     metadata = output / "BUILD-INFO.json"
@@ -100,7 +102,10 @@ def package(source, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=ROOT / "build/linux-amd64")
-    parser.add_argument("--output", type=Path, default=ROOT / "build/artifacts-linux-amd64")
+    parser.add_argument("--arch", choices=("amd64", "arm64"), default=os.environ.get("HERDR_LINUX_ARCH") or {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine()))
+    parser.add_argument("--source", type=Path)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    package(args.source.resolve(), args.output.resolve())
+    require(args.arch in ("amd64", "arm64"), "Specify --arch amd64 or arm64")
+    package((args.source or ROOT / f"build/linux-{args.arch}").resolve(),
+            (args.output or ROOT / f"build/artifacts-linux-{args.arch}").resolve(), args.arch)

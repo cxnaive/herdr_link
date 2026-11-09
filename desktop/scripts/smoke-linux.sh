@@ -3,9 +3,11 @@
 set -eu
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
-BUNDLE="$ROOT/build/linux-amd64"
+ARCH=${HERDR_LINUX_ARCH:-$(go env GOHOSTARCH)}
+case "$ARCH" in amd64|arm64) ;; *) echo "Unsupported Linux architecture: $ARCH" >&2; exit 2 ;; esac
+BUNDLE="$ROOT/build/linux-$ARCH"
 VERSION=$(python3 -c 'import json; print(json.load(open("mygo.json"))["version"])')
-ARCHIVE="$BUNDLE/herdr-desktop-$VERSION-linux-amd64.tar.gz"
+ARCHIVE="$BUNDLE/herdr-desktop-$VERSION-linux-$ARCH.tar.gz"
 OUTPUT="$ROOT/build/linux-smoke"
 mkdir -p "$OUTPUT"
 if [ "${1:-}" != --isolated ]; then

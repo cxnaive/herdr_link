@@ -8,6 +8,14 @@ project follows [Semantic Versioning](https://semver.org/).
 ### Changed
 - Consolidate Relay, Gateway, Android and desktop into Herdr Link with one semantic project version and one release download page. Preserve existing Android signing identity and all application/service data paths.
 
+## [0.3.1] - 2026-11-09
+
+### Added
+- Linux ARM64 Relay, Gateway and desktop release packages, built and tested on native ARM64 CI runners. Desktop downloads include Debian and portable packages with a user-local installer.
+
+### Fixed
+- Align download links and trusted signing/publication guards with the renamed `cxnaive/herdr_link` repository.
+
 ## [0.3.0] - 2026-11-09
 
 First unified Herdr Link version. Platform downloads, upgrade instructions and supported environments are documented in [the release notes](docs/releases/0.3.0.md).

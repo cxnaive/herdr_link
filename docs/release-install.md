@@ -12,7 +12,13 @@ sha256sum --ignore-missing -c SHA256SUMS.txt
 
 Windows 可用 PowerShell `Get-FileHash 文件名 -Algorithm SHA256` 与清单对照。
 
-## Gateway / Relay（Linux x86_64）
+## 选择 Linux 架构
+
+运行 `uname -m`：`x86_64` 选择 `amd64`，`aarch64` 选择 `arm64`。Relay、Gateway 和 Linux 桌面均提供这两种架构；请勿混用安装包。
+
+以下命令以 amd64 为例，ARM64 系统将文件名和解压目录中的 `amd64` 换成 `arm64`。
+
+## Gateway / Relay（Linux x86_64 / ARM64）
 
 ```sh
 tar -xzf herdr-link-gateway-@VERSION@-linux-amd64.tar.gz

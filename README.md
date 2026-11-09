@@ -73,6 +73,7 @@ Gateway 管理允许接入的电脑，将客户端连接路由到对应 Relay。
 ```sh
 mkdir -p bin
 CGO_ENABLED=0 go build -trimpath -o bin/herdr-gateway ./cmd/herdr-gateway
+# 交叉编译 Linux ARM64：在上行 go build 前加 GOOS=linux GOARCH=arm64
 ```
 
 ### 部署
@@ -113,6 +114,7 @@ Relay 与运行 Herdr 的用户一致，访问该用户的 Herdr socket、Agent 
 ```sh
 # 仓库根目录，Go 1.27.3
 CGO_ENABLED=0 go build -trimpath -o bin/herdr-mobile-relay ./cmd/herdr-mobile-relay
+# 交叉编译 Linux ARM64：在上行 go build 前加 GOOS=linux GOARCH=arm64
 ```
 
 ### 部署与接入
@@ -258,7 +260,7 @@ cd desktop
 
 与 Windows 共用应用代码。需要图形桌面、**GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**。
 
-从上方统一 Release 下载 Linux `.deb` 或用户安装包：
+从上方统一 Release 下载与机器架构对应的 Linux `.deb` 或用户安装包。`uname -m` 为 `x86_64` 时选 amd64，为 `aarch64` 时选 arm64；以下示例中的文件名请按下载版本和架构替换：
 
 ```sh
 # Debian / Ubuntu
@@ -269,16 +271,16 @@ sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linu
 ~/.local/bin/herdr-desktop
 ```
 
-源码编译与打包：
+源码编译与打包（自动选择当前机器的 amd64 / arm64）：
 
 ```sh
 cd desktop
 ./scripts/build-linux.sh
 python3 scripts/package-linux.py
-# 安装包位于 build/artifacts-linux-amd64/
+# 安装包位于 build/artifacts-linux-amd64/ 或 build/artifacts-linux-arm64/
 ```
 
-“添加电脑 → 查找本机 Relay”可以发现并连接当前用户的本机 Relay，无需复制邀请，不读取或导入手机凭据。详细依赖、钥匙环与使用说明见 [Linux 安装](desktop/README.md#linux-x86_64)。
+“添加电脑 → 查找本机 Relay”可以发现并连接当前用户的本机 Relay，无需复制邀请，不读取或导入手机凭据。详细依赖、钥匙环与使用说明见 [Linux 安装](desktop/README.md#linux-x86_64--arm64)。
 
 ### macOS · Herdr Desktop
 
@@ -289,7 +291,7 @@ cd desktop
 go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
 ```
 
-从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.3.0 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
+从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.3.1 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
 
 ## 安全与运维
 

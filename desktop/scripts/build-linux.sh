@@ -12,4 +12,6 @@ else
 fi
 PATH="$(dirname -- "$GO"):$PATH"
 export PATH
-"$GO" tool mygo build -platform linux/amd64 -skip-installer -skip-dmg -skip-notarize
+ARCH=${HERDR_LINUX_ARCH:-$("$GO" env GOHOSTARCH)}
+case "$ARCH" in amd64|arm64) ;; *) echo "Unsupported Linux architecture: $ARCH" >&2; exit 2 ;; esac
+"$GO" tool mygo build -platform "linux/$ARCH" -skip-installer -skip-dmg -skip-notarize
