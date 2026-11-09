@@ -156,16 +156,16 @@ set -a; . "$HERDR_RELAY_ENV"; set +a
 <!-- native-downloads:start -->
 ### 服务端安装包
 
-**[Herdr Link v0.3.0](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.0)** · Relay 与 Gateway 使用相同项目版本
+**[Herdr Link v0.3.1](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.1)** · Relay 与 Gateway 使用相同项目版本
 
-| 组件 | Linux x86_64 |
-| --- | --- |
-| Relay | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-relay-0.3.0-linux-amd64.tar.gz) |
-| Gateway | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-gateway-0.3.0-linux-amd64.tar.gz) |
+| 组件 | Linux x86_64 | Linux ARM64 |
+| --- | --- | --- |
+| Relay | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-relay-0.3.1-linux-amd64.tar.gz) | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-relay-0.3.1-linux-arm64.tar.gz) |
+| Gateway | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-gateway-0.3.1-linux-amd64.tar.gz) | [下载部署包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-gateway-0.3.1-linux-arm64.tar.gz) |
 
-[校验文件](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/SHA256SUMS.txt) · [安装说明](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/INSTALL.md) · [部署指南](docs/native-deployment.md)
+[校验文件](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/SHA256SUMS.txt) · [安装说明](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/INSTALL.md) · [部署指南](docs/native-deployment.md)
 
-完整包包含可执行文件、配置和服务模板。ARM64 / macOS 服务端目前只有 CI 独立二进制，不属于本次完整部署包。
+完整包包含可执行文件、配置和服务模板。按系统架构选择 amd64（x86_64）或 arm64（aarch64）。macOS 服务端目前只有 CI 独立二进制。
 <!-- native-downloads:end -->
 
 ## Clients
@@ -204,13 +204,13 @@ set -a; . "$HERDR_RELAY_ENV"; set +a
 <!-- android-downloads:start -->
 #### 下载 Android APK
 
-**[Herdr Link v0.3.0 · Android](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.0)** · Android 9 及以上
+**[Herdr Link v0.3.1 · Android](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.1)** · Android 9 及以上
 
 | 设备 | APK |
 | --- | --- |
-| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-android-0.3.0-arm64-v8a.apk) |
-| 32 位 ARM | [armeabi-v7a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-android-0.3.0-armeabi-v7a.apk) |
-| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-android-0.3.0-x86_64.apk) |
+| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-android-0.3.1-arm64-v8a.apk) |
+| 32 位 ARM | [armeabi-v7a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-android-0.3.1-armeabi-v7a.apk) |
+| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-android-0.3.1-x86_64.apk) |
 
 直接覆盖安装，**不要卸载旧版**。沿用原 Pocket 包名与签名，保留配对和草稿；本地自行签名的 APK 可能无法覆盖安装。Debug APK 仅留在 CI，不放入正式下载列表。
 <!-- android-downloads:end -->
@@ -232,13 +232,15 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 <!-- desktop-downloads:start -->
 ### 桌面客户端下载
 
-**[Herdr Link v0.3.0 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.0)**
+**[Herdr Link v0.3.1 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.1)**
 
 | 系统 | 安装方式 |
 | --- | --- |
-| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
-| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
-| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64-install.sh) |
+| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
+| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
+| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64-install.sh) |
+| Debian / Ubuntu ARM64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64.deb)，使用 `sudo apt install ./文件名.deb` |
+| Linux ARM64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64-install.sh) |
 | macOS | 暂无签名、公证的下载包，使用下方源码构建路径 |
 
 桌面程序目前未签名；Linux 需要 GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。各端共享项目版本，不表示所有平台已完成同等范围的验证。
@@ -264,10 +266,10 @@ cd desktop
 
 ```sh
 # Debian / Ubuntu
-sudo apt install ./herdr-link-desktop-0.3.0-linux-amd64.deb
+sudo apt install ./herdr-link-desktop-0.3.1-linux-amd64.deb
 
 # 或免 root 安装：安装脚本与归档放在同一目录
-sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linux-amd64.tar.gz
+sh herdr-link-desktop-0.3.1-linux-amd64-install.sh herdr-link-desktop-0.3.1-linux-amd64.tar.gz
 ~/.local/bin/herdr-desktop
 ```
 

@@ -7,13 +7,15 @@ Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。�
 <!-- desktop-downloads:start -->
 ## 下载
 
-**[Herdr Link v0.3.0 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.0)**
+**[Herdr Link v0.3.1 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.1)**
 
 | 系统 | 安装方式 |
 | --- | --- |
-| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
-| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
-| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64-install.sh) |
+| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
+| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
+| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-amd64-install.sh) |
+| Debian / Ubuntu ARM64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64.deb)，使用 `sudo apt install ./文件名.deb` |
+| Linux ARM64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.1/herdr-link-desktop-0.3.1-linux-arm64-install.sh) |
 | macOS | 暂无签名、公证的下载包，使用下方源码构建路径 |
 
 桌面程序目前未签名；Linux 需要 GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。各端共享项目版本，不表示所有平台已完成同等范围的验证。
@@ -34,7 +36,7 @@ Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。�
 **Debian / Ubuntu：**
 
 ```sh
-sudo apt install ./herdr-link-desktop-0.3.0-linux-amd64.deb
+sudo apt install ./herdr-link-desktop-0.3.1-linux-amd64.deb
 herdr-desktop
 ```
 
@@ -42,9 +44,9 @@ herdr-desktop
 
 ```sh
 # 安装脚本和归档放在同一目录。
-sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linux-amd64.tar.gz
+sh herdr-link-desktop-0.3.1-linux-amd64-install.sh herdr-link-desktop-0.3.1-linux-amd64.tar.gz
 ~/.local/bin/herdr-desktop
-# 卸载程序但保留配对与草稿：sh herdr-link-desktop-0.3.0-linux-amd64-install.sh --uninstall
+# 卸载程序但保留配对与草稿：sh herdr-link-desktop-0.3.1-linux-amd64-install.sh --uninstall
 ```
 
 需要 **GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**，例如 GNOME Keyring。`.deb` 声明库依赖，钥匙环仍需在桌面会话中运行；KWallet / KeePassXC 需启用 Secret Service。

@@ -30,59 +30,79 @@
     "signed": false
   },
   "release": {
-    "version": "0.3.0",
-    "tag": "v0.3.0",
-    "source_commit": "0ec9d316d6d5d2baa135a914ae97e760984a48af",
-    "build_run_id": 42575045229,
-    "release_id": 438818042,
+    "version": "0.3.1",
+    "tag": "v0.3.1",
+    "source_commit": "8e774f940cb4510851ca56cb46dd253828db0113",
+    "build_run_id": 42589399825,
+    "release_id": 438914773,
     "assets": {
-      "herdr-link-desktop-0.3.0-linux-amd64.tar.gz": {
-        "size": 7158164,
-        "digest": "sha256:b3cd15e7daf90a8898559d95910559498ad2a03ca2ade08063e84a7826a6a5d3"
+      "herdr-link-desktop-0.3.1-windows-amd64.zip": {
+        "size": 7409644,
+        "digest": "sha256:f87b2728ce408fde706c8591152b0b3e2859e5631be8e0524e8ca4b050e2d914"
       },
-      "herdr-link-android-0.3.0-x86_64.apk": {
-        "size": 36407637,
-        "digest": "sha256:9f14a0331470a0b91b1230441be7ebdf92e146dad19d727dc697f95b7ba0c681"
+      "herdr-link-gateway-0.3.1-linux-arm64.tar.gz": {
+        "size": 3085962,
+        "digest": "sha256:87c5db0b221b0be8c7fb23e674b6a1255c150a42a4f788881a5d1f8767c64e43"
       },
-      "herdr-link-desktop-0.3.0-windows-amd64.zip": {
-        "size": 7409639,
-        "digest": "sha256:d95382cf7723bd5cb21a44ad090240de18842ae5e8ba7a13acdbd1040b74253e"
-      },
-      "herdr-link-gateway-0.3.0-linux-amd64.tar.gz": {
-        "size": 3436430,
-        "digest": "sha256:f56b72deeeac98ad53ce8580a5106ef5582a349182d9162fc6bab781b487ab31"
+      "herdr-link-android-0.3.1-armeabi-v7a.apk": {
+        "size": 24496489,
+        "digest": "sha256:b4dee8e007051b13f66ab3f9c6582f4b094098d38ef8434eebfa0d0da63227c0"
       },
       "INSTALL.md": {
-        "size": 2446,
-        "digest": "sha256:2adf96ebf99348179a57b229f488a3d3856ace54997b3a701e774194fd51da57"
+        "size": 2740,
+        "digest": "sha256:75ec892854d0fbb94237f931d0135a3226b7412786d05e4787ff92be6ea76453"
       },
-      "herdr-link-desktop-0.3.0-linux-amd64.deb": {
-        "size": 7166372,
-        "digest": "sha256:0b5ace4a55bec259e9cab9f5e11f376851762a293ef0975ea8bb2dc3adf00727"
+      "herdr-link-desktop-0.3.1-linux-arm64.deb": {
+        "size": 6544808,
+        "digest": "sha256:516fff4a97776d0e7b61cafc9a4d7f81dcd2eaed54ef063f56c4b71f14152b34"
       },
-      "herdr-link-android-0.3.0-armeabi-v7a.apk": {
-        "size": 24496489,
-        "digest": "sha256:afdb3faa543d25c1278b44ba76069cffe2fdac148938b32afbad03175037dad6"
+      "herdr-link-desktop-0.3.1-linux-amd64-install.sh": {
+        "size": 7354,
+        "digest": "sha256:400f59e76fb06dd966d4dc4ac27f0822c315cf227c9851e4eb231b46f437120d"
+      },
+      "herdr-link-desktop-0.3.1-linux-amd64.tar.gz": {
+        "size": 7158161,
+        "digest": "sha256:abb6be43da0c996790a9e53387d2005863e7d9c629cd1160c779344829f18571"
+      },
+      "herdr-link-desktop-0.3.1-linux-arm64-install.sh": {
+        "size": 7354,
+        "digest": "sha256:400f59e76fb06dd966d4dc4ac27f0822c315cf227c9851e4eb231b46f437120d"
+      },
+      "herdr-link-relay-0.3.1-linux-amd64.tar.gz": {
+        "size": 11346872,
+        "digest": "sha256:83106f65071ed99b6a3db09a20fbbba41531542f4a0acf344ffb583150b56775"
+      },
+      "herdr-link-gateway-0.3.1-linux-amd64.tar.gz": {
+        "size": 3437427,
+        "digest": "sha256:98790002bdd9a32dd66db247fd89737e43c82fde338fba78820a6d400e0f7ca9"
       },
       "SHA256SUMS.txt": {
-        "size": 1131,
-        "digest": "sha256:565ca14672a8d2937a23a3e3caa84d381a6b5f7a66eff6f7ed98064197511fa3"
+        "size": 1680,
+        "digest": "sha256:68bf822e262e3fdae4ec74ab858c86ac8a3437de9df264d257154c3313894ad1"
       },
-      "herdr-link-relay-0.3.0-linux-amd64.tar.gz": {
-        "size": 11347156,
-        "digest": "sha256:571f25bfeec0de99caeeeb12ef0db5df5c40f2601fc7124cdbdf1eb03e95bbcb"
+      "herdr-link-desktop-0.3.1-linux-amd64.deb": {
+        "size": 7166366,
+        "digest": "sha256:a19540ec06ea87c13558a786232a9116ca44c12fcb4aed387371be1e8661db79"
       },
-      "herdr-link-desktop-0.3.0-linux-amd64-install.sh": {
-        "size": 7354,
-        "digest": "sha256:4d00fa7d5dd9be9fdd212b6511b97904c6e765d8e5e88050f142e370f6cf0e93"
+      "herdr-link-desktop-0.3.1-linux-arm64.tar.gz": {
+        "size": 6535523,
+        "digest": "sha256:6d9dce3e5136d84e90676f3d7bfbc9c376a27295eed0c9bd913712d1e8899a6c"
+      },
+      "herdr-link-android-0.3.1-x86_64.apk": {
+        "size": 36407637,
+        "digest": "sha256:2acbcbbcc2cc236db4c3b6dc13925495d156dae1f98f99751efa210ede7f2912"
       },
       "BUILD-INFO.json": {
-        "size": 7781,
-        "digest": "sha256:3271037600936de4c77aafe8006bc0f3fd955dddcea77a78ec24d9d721772711"
+        "size": 11241,
+        "digest": "sha256:1b58e9b60b7f4f6e1ea634123ccaf2a642b13556df0a739a39534d5863dc5a85"
       },
-      "herdr-link-android-0.3.0-arm64-v8a.apk": {
+      "herdr-link-android-0.3.1-arm64-v8a.apk": {
         "size": 31459681,
-        "digest": "sha256:9ed6813eb691528b1308c6c778905789e8bad3b25384ee8c18ddc270e3e59f4b"
+        "digest": "sha256:ad0b86bce4c6e914725c4548b402a34360b2886ebe0acb5acb1baff941182d84"
+      },
+      "herdr-link-relay-0.3.1-linux-arm64.tar.gz": {
+        "size": 10533096,
+        "digest": "sha256:c7af344171fed5c23606106e3f027ac30d0e14a66d5e144fb39bb2b79aee0bdc"
       }
     }
   }
