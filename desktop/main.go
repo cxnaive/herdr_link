@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"flag"
 	"log"
 	"runtime"
@@ -18,6 +19,19 @@ import (
 
 //go:embed resources/icon.png
 var appIcon []byte
+
+//go:embed mygo.json
+var appBuildConfig []byte
+
+func applicationVersion() string {
+	var config struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(appBuildConfig, &config); err != nil || config.Version == "" {
+		panic("missing desktop build version")
+	}
+	return config.Version
+}
 
 var brandIcon, _ = ui.DecodeBitmap(appIcon)
 
@@ -145,7 +159,7 @@ func main() {
 		log.Fatal(err)
 	}
 	mygo.App.SetName("Herdr Desktop")
-	mygo.App.SetVersion("0.1.0")
+	mygo.App.SetVersion(applicationVersion())
 	mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu},
 		{Label: "视图", Submenu: []*mygo.MenuItem{

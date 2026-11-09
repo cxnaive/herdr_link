@@ -29,7 +29,7 @@ Linux 客户端连接同一用户的本机 Relay 时，可直接选择“查找�
 - 公网服务器：安装 Gateway，开放 **TCP 8377**；SSH 另作维护。
 - 手机或桌面：安装客户端，见 [README 下载区](README.md#下载-android-apk) 和 [桌面安装](desktop/README.md)。
 
-安装包与校验方法见[部署指南](docs/native-deployment.md)。Gateway 管理式接入需要 Relay `0.23.5+codexfix.20`、Gateway `0.23.5+codexfix.7` 或更新版本；下载时核对版本，不要拿不含此功能的旧发布包执行新命令。
+安装包与校验方法见[部署指南](docs/native-deployment.md)。Gateway 管理式接入需要 Herdr Link `0.3.0` 或更新版本；下载时核对版本，不要拿不含此功能的旧发布包执行新命令。
 
 ### 2. 部署 Gateway
 

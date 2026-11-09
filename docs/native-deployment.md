@@ -2,7 +2,7 @@
 
 本文面向 Linux x86_64 的完整部署包。Gateway 安装在公网服务器，Relay 安装在运行 Herdr 的电脑，使用与 Herdr / Agent 相同的普通用户。
 
-管理式接入要求 Relay **0.23.5+codexfix.20**、Gateway **0.23.5+codexfix.7** 或更新版本。当前已发布包与源码可能不同，请核对 [README 下载区](../README.md#服务端安装包) 和包内 `BUILD-INFO.json`。旧版仍可使用本文的[静态白名单方式](#旧版静态白名单接入)。
+管理式接入要求 Herdr Link **0.3.0** 或更新版本。当前已发布包与源码可能不同，请核对 [README 下载区](../README.md#服务端安装包) 和包内 `BUILD-INFO.json`。旧版仍可使用本文的[静态白名单方式](#旧版静态白名单接入)。
 
 ## 准备环境
 

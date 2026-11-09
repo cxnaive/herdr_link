@@ -28,12 +28,13 @@ on:
       - 'internal/app/server.go'
       - '.github/workflows/desktop-windows.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: desktop-windows-${{ github.event.pull_request.number || github.ref }}
+  group: desktop-windows-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

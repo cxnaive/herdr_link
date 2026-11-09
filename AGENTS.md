@@ -10,15 +10,16 @@ Read `README.md` and `QUICKSTART.md` before changing behavior. `docs/` holds the
 - Release: prepare it on `dev` (version in `herdr-plugin.toml`, `CHANGELOG.md`, `README.md`, then `make web-release`), merge `dev` into `main`, then tag `vX.Y.Z` on `main`. The tag runs `.github/workflows/release.yml`.
 - After a release, add it first in `tests/mobile/baselines.json` and drop the oldest entry. The mobile device lane installs a recent release and upgrades it to the build under test; see `tests/mobile/AGENTS.md`.
 
-## This fork's Android / Native component releases
+## Herdr Link releases in this fork
 
-- This fork's actual default branch is `feat/android-file-companion`; `dev` and `main` are upstream conventions and currently do not exist here. Use the existing default branch when the user requests synchronization to the main branch, without creating or renaming branches unnecessarily.
-- Routine CI selects changed components. Full race, browser and mobile-device qualification are manual via `check.yml` with `full=true`; do not restore them to every push without a user request. Windows desktop validation and ZIP builds use `desktop-windows.yml`; Linux x86_64 desktop validation and Debian/user-local packages use `desktop-linux.yml`.
-
-- `android-*` / `native-*` releases use `.github/workflows/publish-components.yml` on `feat/android-file-companion`, not the upstream `v*` plugin lane above.
-- Always reuse a successful trusted `build-artifacts` run. Dispatch a read-only rehearsal first, then explicitly publish the same run ID. Never build, re-sign, download/re-upload release assets through the operator's computer.
-- The CI publisher verifies source, versions, hashes and Android certificate, publishes without overwriting existing assets/tags, and updates README download blocks plus `VERSION.json` from the publication receipt on the existing branch.
-- Preserve the system-first README structure and the 1×4 gallery inside the Clients / Android section; do not move the gallery back to the top. Do not claim a release task is finished while the CI documentation-update step failed. Never work around an upload conflict with `--clobber` or a moved tag.
+- The actual default branch is `feat/android-file-companion`; use it without creating branches unnecessarily. Upstream `dev` / `main` conventions above do not apply here.
+- The project is **Herdr Link**, using one numeric semantic version in `VERSION.json` for Relay, Gateway, Android and desktop. Android versionCode must increase and its signing identity must remain unchanged. Preserve existing application IDs, runtime service names, keys and data paths.
+- Routine checks remain component-scoped. Full race/browser/device qualification is manual via `check.yml` with `full=true`.
+- Release builds: manually dispatch `build-artifacts.yml` with `components=release`. It calls the desktop platform workflows and assembles one `herdr-link-release` artifact from the same commit/run. Never use local binaries, re-sign locally or manually upload release assets.
+- Publication: use `publish-components.yml` (display name `publish-release`), first read-only `publish=false`, then `publish=true` with the **same successful build run ID**. It creates one `Herdr Link vX.Y.Z` release with tag `vX.Y.Z`; the upstream plugin tag workflow is gated off in this fork.
+- Publisher validates source, artifact/file digests, Android package/version/ABI/certificate, collision guards and upgrade monotonicity. It updates README download blocks and `VERSION.json` from the publication receipt. Do not call publishing complete if that update failed.
+- Never clobber assets, move tags or automatically delete old releases. Historical-release deletion requires explicit user authorization and must wait for verified replacement downloads.
+- Preserve the system-first README and the 1×4 gallery inside Clients / Android; do not move the gallery to the top. Download sections are maintained by `scripts/project_release_docs.py`.
 
 ## Commands
 

@@ -1,4 +1,4 @@
-# Herdr Relay Extra
+# Herdr Link
 
 一套连接 **多台 Herdr 电脑与多个客户端**的自托管系统。Relay 负责接入电脑上的 Herdr，Gateway 负责电脑注册和加密流量转发，Android 与桌面客户端提供对话、终端、审批和文件操作界面。
 
@@ -102,7 +102,7 @@ ssh -N -L 18378:127.0.0.1:18378 user@PUBLIC_HOST
 
 登录后为电脑生成 `herdr-gateway://` 接入码。它用于 Relay 注册，不是客户端配对邀请。电脑数量没有固定为两台，可在管理页调整连接上限。
 
-管理式接入需要 **Gateway `0.23.5+codexfix.7` 与 Relay `0.23.5+codexfix.20` 或更新版本**。已有旧版可继续使用静态白名单；迁移时保留电脑 ID 和客户端配对，见[迁移说明](docs/gateway-management.md#迁移已有电脑)。
+**Herdr Link 0.3.0** 已包含 Gateway 管理和 Relay 接入功能。已有旧版可继续使用静态白名单；迁移时保留电脑 ID 和客户端配对，见[迁移说明](docs/gateway-management.md#迁移已有电脑)。
 
 ## Relay
 
@@ -229,9 +229,15 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 也可把 APK 复制到手机安装。源码构建与发布包签名可能不同，不要为解决签名冲突而直接卸载含有配对数据的旧版。使用方法见 [Android 文档](herdr-android/README.md)。
 
+<!-- desktop-downloads:start -->
+### 桌面客户端下载
+
+统一项目 Release 正在准备；当前预览制品仍可从下方 CI 下载。
+<!-- desktop-downloads:end -->
+
 ### Windows · Herdr Desktop
 
-从 [Windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 成功运行的 Artifacts 下载便携包，解压后运行 `Herdr Desktop.exe`；同目录保留 `ghostty-vt.dll`。
+从上方统一 Release 下载 Windows 便携包，解压后运行 `Herdr Desktop.exe`；同目录保留 `ghostty-vt.dll`。
 
 使用 Go **1.27.3** 在 Windows 编译：
 
@@ -245,14 +251,14 @@ cd desktop
 
 与 Windows 共用应用代码。需要图形桌面、**GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**。
 
-从 [Linux CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-linux.yml) 成功运行的 Artifacts 下载 `.deb` 或用户安装包：
+从上方统一 Release 下载 Linux `.deb` 或用户安装包：
 
 ```sh
 # Debian / Ubuntu
-sudo apt install ./herdr-desktop_0.1.0_amd64.deb
+sudo apt install ./herdr-link-desktop-0.3.0-linux-amd64.deb
 
-# 或免 root 安装：install.sh 与归档放在同一目录
-sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz
+# 或免 root 安装：安装脚本与归档放在同一目录
+sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linux-amd64.tar.gz
 ~/.local/bin/herdr-desktop
 ```
 
@@ -276,7 +282,7 @@ cd desktop
 go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
 ```
 
-从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.1.0 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
+从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.3.0 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
 
 ## 安全与运维
 
@@ -290,6 +296,6 @@ go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-no
 
 [快速开始](QUICKSTART.md) · [安装、升级与排障](docs/native-deployment.md) · [Gateway 管理](docs/gateway-management.md) · [文件权限](docs/file-access.md) · [开发与测试](docs/building.md) · [CI 与发布](docs/native-ci.md)
 
-源码版本及发布来源见 [VERSION.json](VERSION.json)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。本项目基于 Herdr Relay 扩展，不是上游的官方发布；所有 Release 附件由 CI 构建和发布。
+源码版本及发布来源见 [VERSION.json](VERSION.json)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。本项目基于 Herdr Relay 扩展，不是上游的官方发布；所有 Release 附件由 CI 构建和发布。项目使用标准 `vMAJOR.MINOR.PATCH` 版本，一个 Release 包含当前支持的所有组件。
 
 遵循 [LICENSE](LICENSE)；Android 第三方说明见 [THIRD_PARTY.md](herdr-android/THIRD_PARTY.md)。

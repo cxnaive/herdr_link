@@ -1,9 +1,16 @@
 # Changelog
 
-Notable user-facing changes to Herdr Mobile Relay are documented here. The
+Notable user-facing changes to Herdr Link are documented here. The
 project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Changed
+- Consolidate Relay, Gateway, Android and desktop into Herdr Link with one semantic project version and one release download page. Preserve existing Android signing identity and all application/service data paths.
+
+## [0.3.0] - 2026-11-09
+
+First unified Herdr Link version. Platform downloads, upgrade instructions and supported environments are documented in [the release notes](docs/releases/0.3.0.md).
 
 ### Changed
 - Default Relay-launched Codex terminal titles to thread ID and name. Explicit startup overrides still win, restarts preserve the arguments without duplicating them, and other agents or manually launched terminals are unchanged. Read the configured title ID from Herdr and uniquely match it within that terminal’s verified primary candidates, including retained standalone roots after resume. Missing titles, prefix collisions, child selections and metadata conflicts remain unconfirmed; names and transcript similarity are not used.

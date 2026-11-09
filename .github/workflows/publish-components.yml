@@ -1,4 +1,4 @@
-name: publish-components
+name: publish-release
 
 on:
   workflow_dispatch:
@@ -7,11 +7,6 @@ on:
         description: Successful build-artifacts run ID (existing CI output, no rebuild)
         required: true
         type: string
-      components:
-        description: Components to promote (bump only the versions being released)
-        type: choice
-        options: [both, android, native]
-        default: both
       publish:
         description: Publish after verification and update README (false is a read-only rehearsal)
         type: boolean
@@ -27,7 +22,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify exact CI release assets
+    name: Verify Herdr Link CI release
     if: >-
       github.repository == 'cxnaive/herder_relay_extra' &&
       github.ref == 'refs/heads/feat/android-file-companion'
@@ -39,14 +34,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
-        if: inputs.components != 'native'
         with:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
-        if: inputs.components != 'native'
       - name: Install APK inspection tools (no Gradle, no signing key)
-        if: inputs.components != 'native'
         run: sdkmanager "build-tools;35.0.0"
       - name: Test publisher guards
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
@@ -54,21 +46,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUN_ID: ${{ inputs.build_run_id }}
-          COMPONENTS: ${{ inputs.components }}
-        run: python3 scripts/publish-components.py prepare dist/promotion --build-run-id "$BUILD_RUN_ID" --components "$COMPONENTS"
+        run: python3 scripts/project_release.py prepare dist/promotion --build-run-id "$BUILD_RUN_ID"
       - name: Read-only publication rehearsal
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/publish-components.py promote dist/promotion
+        run: python3 scripts/project_release.py promote dist/promotion
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: component-promotion-${{ github.run_attempt }}
+          name: project-promotion-${{ github.run_attempt }}
           path: dist/promotion/
           retention-days: 1
           if-no-files-found: error
 
   publish:
-    name: Publish verified assets and update download records
+    name: Publish one Herdr Link release and update downloads
     needs: verify
     if: inputs.publish && needs.verify.result == 'success'
     runs-on: ubuntu-24.04
@@ -83,12 +74,12 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: component-promotion-${{ github.run_attempt }}
+          name: project-promotion-${{ github.run_attempt }}
           path: dist/promotion
       - name: Promote exact bytes (no build, no signing, no executable smoke)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/publish-components.py promote dist/promotion --publish
+        run: python3 scripts/project_release.py promote dist/promotion --publish
       - name: Update README and published-version records on the existing branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,9 +87,9 @@ jobs:
           set -euo pipefail
           git fetch origin feat/android-file-companion
           git checkout --detach origin/feat/android-file-companion
-          python3 scripts/publish-components.py docs dist/promotion
+          python3 scripts/project_release.py docs dist/promotion
           git diff --check
-          git add -- README.md VERSION.json herdr-android/README.md docs/native-deployment.md
+          git add -- README.md VERSION.json herdr-android/README.md desktop/README.md
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m 'docs(release): refresh CI-published downloads'
@@ -108,7 +99,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: component-publication-${{ github.run_attempt }}
+          name: project-publication-${{ github.run_attempt }}
           path: dist/promotion/published.json
           retention-days: 1
           if-no-files-found: warn

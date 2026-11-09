@@ -11,7 +11,7 @@ on:
         description: Components to build (manual runs can build both from one commit)
         type: choice
         default: all
-        options: [all, native, android]
+        options: [all, native, android, release]
 
 permissions:
   contents: read
@@ -243,3 +243,32 @@ jobs:
           path: dist/android-signed/
           if-no-files-found: error
           retention-days: 1
+
+  desktop-linux-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
+    uses: ./.github/workflows/desktop-linux.yml
+
+  desktop-windows-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
+    uses: ./.github/workflows/desktop-windows.yml
+
+  project-release-bundle:
+    name: Assemble Herdr Link release (exact CI bytes)
+    if: github.event_name == 'workflow_dispatch' && inputs.components == 'release'
+    needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist/inputs
+      - name: Verify source and assemble consistently named downloads
+        run: python3 scripts/project_release.py assemble dist/inputs dist/herdr-link
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: herdr-link-release
+          path: dist/herdr-link/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error

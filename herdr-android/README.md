@@ -1,4 +1,4 @@
-# Herdr Pocket · Android
+# Herdr Link · Android
 
 连接多台 Herdr 电脑的原生 Android 客户端。手机通过 Gateway 连接电脑 Relay；每台电脑独立配对，按电脑、工作空间和 Agent 展示。
 

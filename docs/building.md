@@ -35,9 +35,9 @@ python3 scripts/check-native-release.py /tmp/herdr-native-test
 
 日常检查按组件选择。完整 race、浏览器和设备资格验证手动触发，见 [CI 与发布](native-ci.md)。
 
-所有 Release 附件均来自可信的成功 CI 构建。发布使用 `publish-components.yml`：先只读预演，再发布**同一 build run**；不上传本地编译或重新签名的附件。发布器根据回执更新下载区和 `VERSION.json`。
+所有 Release 附件均来自可信的成功 CI 构建。发布使用 `publish-components.yml`（界面名称 `publish-release`）：先只读预演，再发布**同一 build run**；不上传本地编译或重新签名的附件。发布器根据回执更新下载区和 `VERSION.json`。
 
-下载区的模板是 `scripts/component_release_docs.py`。修改 README 时保留下载区和四图画廊标记；画廊位于 Clients / Android 小节，发布器不得移动它。
+下载区的模板是 `scripts/project_release_docs.py`。修改 README 时保留下载区和四图画廊标记；画廊位于 Clients / Android 小节，发布器不得移动它。
 
 ```sh
 python3 -m unittest discover -s scripts/tests -p 'test_*.py'

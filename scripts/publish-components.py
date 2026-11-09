@@ -350,6 +350,7 @@ def main():
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
     runner_guard()
+    require("project" not in json.loads((ROOT / "VERSION.json").read_text()), "Legacy component releases are retired; use project_release.py")
     directory = args.directory.resolve()
     if args.mode == "prepare":
         prepare(args.build_run_id or "", list(ARTIFACTS) if args.components == "both" else [args.components], directory)

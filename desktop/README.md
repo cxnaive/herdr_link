@@ -1,33 +1,39 @@
-# Herdr Desktop
+# Herdr Link · Desktop
 
 Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。通过 Relay 连接多台 Herdr 电脑，提供对话、审批、交互终端和工作区文件面板。
 
-当前版本 **0.1.0 开发预览**。系统结构与服务端安装见[项目首页](../README.md)。
+当前版本 **0.3.0 开发预览**。系统结构与服务端安装见[项目首页](../README.md)。
+
+<!-- desktop-downloads:start -->
+## 下载
+
+统一项目 Release 正在准备；当前预览制品可从桌面 CI 获取。
+<!-- desktop-downloads:end -->
 
 ## Windows
 
-从 [desktop-windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 成功运行的 Artifacts 下载 `herdr-desktop-windows-amd64-<构建编号>`，校验后解压。
+从上方统一 Release 下载 Windows 便携 ZIP，按同一 Release 的校验和核对后解压。
 
 运行 `Herdr Desktop.exe`，保持 `ghostty-vt.dll` 与程序在同一目录。当前是未签名便携包；PDF 预览需要系统 WebView2。
 
 ## Linux x86_64
 
-从 [desktop-linux CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-linux.yml) 成功运行的 Artifacts 下载 `herdr-desktop-linux-amd64-<构建编号>`，解压后执行 `sha256sum -c SHA256SUMS.txt`。
+从上方统一 Release 下载 Linux 安装文件和 `SHA256SUMS.txt`，执行 `sha256sum --ignore-missing -c SHA256SUMS.txt`。
 
 **Debian / Ubuntu：**
 
 ```sh
-sudo apt install ./herdr-desktop_0.1.0_amd64.deb
+sudo apt install ./herdr-link-desktop-0.3.0-linux-amd64.deb
 herdr-desktop
 ```
 
 **免 root 用户安装：**
 
 ```sh
-# install.sh 和归档放在同一目录。
-sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz
+# 安装脚本和归档放在同一目录。
+sh herdr-link-desktop-0.3.0-linux-amd64-install.sh herdr-link-desktop-0.3.0-linux-amd64.tar.gz
 ~/.local/bin/herdr-desktop
-# 卸载程序但保留配对与草稿：sh install.sh --uninstall
+# 卸载程序但保留配对与草稿：sh herdr-link-desktop-0.3.0-linux-amd64-install.sh --uninstall
 ```
 
 需要 **GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**，例如 GNOME Keyring。`.deb` 声明库依赖，钥匙环仍需在桌面会话中运行；KWallet / KeePassXC 需启用 Secret Service。

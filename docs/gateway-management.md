@@ -2,7 +2,7 @@
 
 管理页用于管理**哪些电脑可以接入 Gateway**。它不读取对话正文、不安装远端 Relay，也不负责启动或停止 Agent。
 
-需要 Gateway **0.23.5+codexfix.7** 及以上；电脑执行管理式接入需要 Relay **0.23.5+codexfix.20** 及以上。下载时核对版本，见 [服务端安装包](../README.md#服务端安装包)。
+需要 Herdr Link **0.3.0** 及以上的 Gateway 和 Relay。下载时核对版本，见 [服务端安装包](../README.md#服务端安装包)。
 
 ## 首次安装 Gateway
 

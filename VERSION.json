@@ -1,22 +1,22 @@
 {
   "repository": "cxnaive/herder_relay_extra",
-  "snapshot_date": "2026-11-07",
+  "snapshot_date": "2026-11-09",
   "android": {
-    "version": "0.2.31",
-    "version_code": 34,
+    "version": "0.3.0",
+    "version_code": 35,
     "source_path": "herdr-android",
     "reference_upstream_revision": "09b52781399114a7576d40fcdf91ccefd7686be6",
     "signature": "debug",
     "signing_certificate_sha256": "fe1ddf4d04f46d45168d53ca25dd2b379f242b6cd9b23169c9717258cf5232b9"
   },
   "relay": {
-    "version": "0.23.5+codexfix.20",
+    "version": "0.3.0",
     "source_path": ".",
     "upstream_version": "0.23.5",
     "upstream_revision": "27054011fd8137d5f9702cc9e718aff1bd73443d"
   },
   "native_gateway": {
-    "version": "0.23.5+codexfix.7",
+    "version": "0.3.0",
     "source_path": "cmd/herdr-gateway",
     "public_port_example": "8377/tcp"
   },
@@ -49,5 +49,14 @@
       "Herdr-Pocket-0.2.31-release-x86_64.apk",
       "SHA256SUMS.txt"
     ]
+  },
+  "project": {
+    "name": "Herdr Link",
+    "version": "0.3.0"
+  },
+  "desktop": {
+    "version": "0.3.0",
+    "source_path": "desktop",
+    "signed": false
   }
 }

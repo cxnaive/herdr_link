@@ -289,11 +289,11 @@ class PublisherTest(unittest.TestCase):
         self.assertIn("if: inputs.publish && needs.verify.result == 'success'", write)
         self.assertIn('promote dist/promotion --publish', write)
         self.assertNotIn('prepare dist/promotion', write)
-        self.assertIn('scripts/publish-components.py docs dist/promotion', write)
+        self.assertIn('scripts/project_release.py docs dist/promotion', write)
         self.assertIn('git push origin HEAD:feat/android-file-companion', write)
         for forbidden in ('gradlew', 'go build', '--clobber', '--force', 'keystore', 'pull_request_target'):
             self.assertNotIn(forbidden, text)
-        self.assertNotIn('${{ inputs.build_run_id }}', text.split('run: python3 scripts/publish-components.py prepare', 1)[1].split('\n', 1)[0])
+        self.assertNotIn('${{ inputs.build_run_id }}', text.split('run: python3 scripts/project_release.py prepare', 1)[1].split('\n', 1)[0])
 
 
 if __name__ == "__main__":
