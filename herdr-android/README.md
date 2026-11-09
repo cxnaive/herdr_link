@@ -7,17 +7,15 @@
 <!-- android-downloads:start -->
 ## 安装
 
-**[Herdr Pocket 0.2.31](https://github.com/cxnaive/herder_relay_extra/releases/tag/android-v0.2.31)** · Android 9 及以上
+**[Herdr Link v0.3.0 · Android](https://github.com/cxnaive/herder_relay_extra/releases/tag/v0.3.0)** · Android 9 及以上
 
 | 设备 | APK |
 | --- | --- |
-| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-arm64-v8a.apk) |
-| 32 位 ARM 设备 | [armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-armeabi-v7a.apk) |
-| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-x86_64.apk) |
+| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-android-0.3.0-arm64-v8a.apk) |
+| 32 位 ARM | [armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-android-0.3.0-armeabi-v7a.apk) |
+| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-android-0.3.0-x86_64.apk) |
 
-更新时直接覆盖安装，**不要卸载旧版**，以保留配对与草稿。
-发布包沿用固定签名证书；自行构建的 APK 可能无法覆盖安装。
-校验文件、其他构建与版本说明见 Release 页面。
+直接覆盖安装，**不要卸载旧版**。沿用原 Pocket 包名与签名，保留配对和草稿；本地自行签名的 APK 可能无法覆盖安装。Debug APK 仅留在 CI，不放入正式下载列表。
 <!-- android-downloads:end -->
 
 ## 首次连接
