@@ -14,6 +14,8 @@ project follows [Semantic Versioning](https://semver.org/).
 - Codex associated-history and manual-pin overrides, terminal status-line identity parsing and automatic `/status` probing.
 
 ### Added
+- Linux desktop can discover a same-user running native TCP Relay, enroll through its private pairing socket and connect over authenticated loopback without a Gateway round trip. Keep existing computer identities and roles, and reuse credentials after Relay restarts.
+- Linux x86_64 desktop packages share the Windows client's native interface, terminal, conversation and file tools. Install through a Debian package or a user-local archive; credentials stay in the Linux system keyring rather than plaintext.
 - Save independent desktop application and terminal appearance preferences, with soft light/dark palettes and a dark terminal by default. Improve low-contrast terminal text against its actual background, including explicit remote colors, without reconnecting or changing remote configuration.
 - Desktop per-device opt-in for outside-workspace read-only files, shared by directory browsing, citations, Markdown images, previews and downloads. Revoking access cancels transfers and closes cached previews.
 - Restore long desktop conversations to the previous reading depth across reconnects, with full-history loading, page/message progress and pause/resume. Recover expired cursors without dropping already-read content or truncating conversations at 2,000 entries.

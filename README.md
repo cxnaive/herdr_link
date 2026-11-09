@@ -32,11 +32,11 @@
 | 电脑 Relay | `0.23.5+codexfix.19` | 仓库根目录，`cmd/herdr-mobile-relay` |
 | 原生 TCP Gateway | `0.23.5+codexfix.6` | `cmd/herdr-gateway`，`deploy/native-tcp/` |
 | Herdr Pocket Android | `0.2.31` / versionCode `34` | `herdr-android/` |
-| Herdr Desktop Windows / macOS | `0.1.0` 开发预览 | [`desktop/`](desktop/README.md) |
+| Herdr Desktop Windows / Linux / macOS | `0.1.0` 开发预览 | [`desktop/`](desktop/README.md) |
 
 桌面版采用原生界面，左侧按电脑、项目和 Agent 导航，中间切换对话与交互终端，右侧浏览工作区文件并下载。构建与使用方法见 [Herdr Desktop](desktop/README.md)。尚未发布正式安装包。
 
-Windows 便携包由 [desktop-windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 自动测试并构建，可在成功运行的 Artifacts 中下载。日常 CI 按组件触发，完整浏览器/模拟器/竞态验证改为手动深度检查，见 [CI 说明](docs/native-ci.md)。
+Windows 便携包由 [desktop-windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 自动测试并构建，可在成功运行的 Artifacts 中下载。 Linux x86_64 同款客户端新增独立 `desktop-linux` CI，生成 `.deb` 和免 root 用户安装包；系统依赖及安装步骤见 [Linux 桌面版](desktop/README.md#linux-x86_64)。 Linux 还可在“添加电脑”中发现并直连当前用户的本机 Relay，无需复制邀请、也不经过远端 Gateway，仍使用独立设备鉴权。日常 CI 按组件触发，完整浏览器/模拟器/竞态验证改为手动深度检查，见 [CI 说明](docs/native-ci.md)。
 
 本次按当前可用源码快照替换此前根目录的 0.24.0 文件扩展实现，不把两条不同基线混为同一版本。组件对应关系及源码来源见 [VERSION.json](VERSION.json)。旧内容仍可从 Git 历史查看。
 

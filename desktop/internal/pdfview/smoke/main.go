@@ -1,4 +1,4 @@
-// Run manually to validate the platform PDF renderer without showing a window.
+// Validate the system PDF renderer. On Linux, run inside Xvfb: WebKit needs a realized window.
 package main
 
 import (
@@ -9,7 +9,9 @@ import (
 	"github.com/egoist/mygo/ui"
 	"log"
 	"os"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -41,10 +43,11 @@ func main() {
 		log.Fatal(err)
 	}
 	var once sync.Once
+	var captured atomic.Bool
 	var viewer *pdfview.Viewer
 	mygo.App.SetName("Herdr PDF Check")
 	mygo.App.WhenReady(func() {
-		win := mygo.NewWindow(mygo.WindowOptions{Title: "PDF check", Hidden: true, SkipTaskbar: true, Width: 900, Height: 720, Content: ui.View(func(c *ui.Context) {
+		win := mygo.NewWindow(mygo.WindowOptions{Title: "PDF check", Hidden: runtime.GOOS != "linux", SkipTaskbar: true, Width: 900, Height: 720, Content: ui.View(func(c *ui.Context) {
 			if viewer != nil {
 				ui.WebView(c, viewer.Web).Fill()
 			}
@@ -53,6 +56,7 @@ func main() {
 		viewer, err = pdfview.New(win, sample(), func(loadErr error) {
 			if loadErr != nil {
 				log.Println(loadErr)
+				mygo.App.Quit()
 				return
 			}
 			once.Do(func() {
@@ -65,6 +69,7 @@ func main() {
 					if err != nil {
 						log.Println(err)
 					} else {
+						captured.Store(true)
 						log.Println("PDF screenshot:", out)
 					}
 					mygo.App.Quit()
@@ -81,5 +86,8 @@ func main() {
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
+	}
+	if !captured.Load() {
+		log.Fatal("PDF preview did not produce a screenshot")
 	}
 }

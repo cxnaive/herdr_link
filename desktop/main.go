@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"flag"
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/cxnaive/herdr-desktop/internal/pdfview"
@@ -96,6 +97,7 @@ type machine struct {
 	fileCancel     context.CancelFunc
 }
 type application struct {
+	local                          localConnections
 	win                            *mygo.Window
 	ctx                            context.Context
 	cancel                         context.CancelFunc
@@ -212,6 +214,9 @@ func main() {
 				}
 				if len(app.machines) == 0 {
 					app.pairing = true
+					if runtime.GOOS == "linux" {
+						app.findLocalRelays()
+					}
 				}
 			})
 		}()

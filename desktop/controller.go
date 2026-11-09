@@ -207,6 +207,9 @@ func (a *application) connect(m *machine) {
 			}
 			m.session = s
 			m.status = "已加密连接"
+			if m.config.LocalSocket != "" {
+				m.status = "本机直连 · 已加密"
+			}
 			a.status = ""
 		})
 		if err != nil {

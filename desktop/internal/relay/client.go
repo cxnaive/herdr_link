@@ -56,7 +56,7 @@ func parseMessage(b []byte) (Message, error) {
 }
 
 type Session struct {
-	wire       *wire
+	wire       logicalWire
 	cipher     *sessionCipher
 	sendMu     sync.Mutex
 	mu         sync.Mutex
@@ -101,10 +101,10 @@ func Connect(ctx context.Context, computer Computer, persist func(Auth) error) (
 	}
 	return nil, errors.New("credential confirmation failed")
 }
-func dial(ctx context.Context, c Computer) (_ *Session, _ Auth, retErr error) {
+func dialGateway(ctx context.Context, c Computer) (_ logicalWire, retErr error) {
 	conn, err := (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext(ctx, "tcp", c.Address)
 	if err != nil {
-		return nil, Auth{}, errors.New("无法连接网关")
+		return nil, errors.New("无法连接网关")
 	}
 	defer func() {
 		if retErr != nil {
@@ -117,42 +117,69 @@ func dial(ctx context.Context, c Computer) (_ *Session, _ Auth, retErr error) {
 	defer timer.Stop()
 	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	if err = writeAll(conn, append([]byte("HRDRTCP1"), 2)); err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	w := &wire{conn: conn}
 	kind, b, err := w.read()
 	if err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	m, err := parseMessage(b)
 	if err != nil || kind != 1 || Text(m, "type") != "gateway_hello" || Number(m, "proto") != 1 {
-		return nil, Auth{}, errors.New("不兼容的网关握手")
+		return nil, errors.New("不兼容的网关握手")
 	}
 	nonce, err := decode(Text(m, "nonce"), 32)
 	if err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	key, err := decode(c.Rendezvous, 32)
 	if err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	request, _ := json.Marshal(Message{"type": "connect", "proto": 1, "relay_id": c.RelayID, "proof": encode(mac(key, []byte("herdr-gw-connect\x00"), []byte(c.RelayID), nonce))})
 	if err = w.write(1, request); err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	kind, b, err = w.read()
 	if err != nil {
-		return nil, Auth{}, err
+		return nil, err
 	}
 	m, err = parseMessage(b)
 	if err != nil || kind != 1 || Text(m, "type") != "ready" {
-		return nil, Auth{}, errors.New("网关暂时无法连接这台电脑")
+		return nil, errors.New("网关暂时无法连接这台电脑")
 	}
-	hs, err := newHandshake(c.Auth)
+	return w, nil
+}
+
+func dial(ctx context.Context, c Computer) (*Session, Auth, error) {
+	var w logicalWire
+	var err error
+	if c.LocalSocket != "" {
+		w, err = dialLocal(ctx, c.LocalSocket)
+	} else {
+		w, err = dialGateway(ctx, c)
+	}
 	if err != nil {
 		return nil, Auth{}, err
 	}
-	b, _ = json.Marshal(hs.hello())
+	return authenticateWire(ctx, w, c.Auth)
+}
+
+func authenticateWire(ctx context.Context, w logicalWire, authInput Auth) (_ *Session, _ Auth, retErr error) {
+	defer func() {
+		if retErr != nil {
+			w.close()
+		}
+	}()
+	stop := context.AfterFunc(ctx, func() { w.close() })
+	defer stop()
+	timer := time.AfterFunc(20*time.Second, func() { w.close() })
+	defer timer.Stop()
+	hs, err := newHandshake(authInput)
+	if err != nil {
+		return nil, Auth{}, err
+	}
+	b, _ := json.Marshal(hs.hello())
 	if err = w.logicalWrite(b); err != nil {
 		return nil, Auth{}, err
 	}
@@ -160,7 +187,7 @@ func dial(ctx context.Context, c Computer) (_ *Session, _ Auth, retErr error) {
 	if err != nil {
 		return nil, Auth{}, err
 	}
-	m, err = parseMessage(b)
+	m, err := parseMessage(b)
 	if err != nil {
 		return nil, Auth{}, err
 	}
@@ -187,13 +214,13 @@ func dial(ctx context.Context, c Computer) (_ *Session, _ Auth, retErr error) {
 	if err != nil || Text(m, "type") != "e2ee_server_finish" || Number(m, "version") != 2 || Text(m, "device_id") == "" || Text(m, "credential_id") == "" || Number(m, "credential_version") < 1 || (Text(m, "role") != "controller" && Text(m, "role") != "reader") {
 		return nil, Auth{}, errors.New("无效的设备凭据确认")
 	}
-	auth := Auth{Kind: "credential", ID: Text(m, "credential_id"), Version: Number(m, "credential_version"), Secret: c.Auth.Secret, DeviceID: Text(m, "device_id"), Role: Text(m, "role")}
-	if c.Auth.Kind == "invitation" {
+	auth := Auth{Kind: "credential", ID: Text(m, "credential_id"), Version: Number(m, "credential_version"), Secret: authInput.Secret, DeviceID: Text(m, "device_id"), Role: Text(m, "role")}
+	if authInput.Kind == "invitation" {
 		auth.Secret = Text(m, "credential_secret")
 		if _, err = decode(auth.Secret, 32); err != nil {
 			return nil, Auth{}, err
 		}
-	} else if auth.ID != c.Auth.ID || auth.Version != c.Auth.Version || m["credential_secret"] != nil {
+	} else if auth.ID != authInput.ID || auth.Version != authInput.Version || m["credential_secret"] != nil {
 		return nil, Auth{}, errors.New("设备凭据发生变化")
 	}
 	return &Session{wire: w, cipher: cipher, pending: map[string]chan Message{}, closed: make(chan struct{}), Events: make(chan Message, 128)}, auth, nil
@@ -201,7 +228,7 @@ func dial(ctx context.Context, c Computer) (_ *Session, _ Auth, retErr error) {
 func (s *Session) Done() <-chan struct{} { return s.closed }
 func (s *Session) Err() error            { s.mu.Lock(); defer s.mu.Unlock(); return s.err }
 func (s *Session) stop(err error) {
-	s.once.Do(func() { s.mu.Lock(); s.err = err; s.mu.Unlock(); close(s.closed); s.wire.conn.Close() })
+	s.once.Do(func() { s.mu.Lock(); s.err = err; s.mu.Unlock(); close(s.closed); s.wire.close() })
 }
 func (s *Session) Close() { s.stop(errors.New("connection closed")) }
 func (s *Session) readLoop() {

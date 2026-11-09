@@ -1,0 +1,100 @@
+name: desktop-linux
+
+on:
+  push:
+    branches: [feat/android-file-companion, main, dev]
+    paths:
+      - 'desktop/**'
+      - '!desktop/**/*.md'
+      - 'contracts/**'
+      - 'internal/protocol/**'
+      - 'internal/directterminal/**'
+      - 'internal/transport/**'
+      - 'internal/gateway/**'
+      - 'internal/app/desktop_terminal.go'
+      - 'internal/app/server.go'
+      - '.github/workflows/desktop-linux.yml'
+  pull_request:
+    branches: [feat/android-file-companion, main, dev]
+    paths:
+      - 'desktop/**'
+      - '!desktop/**/*.md'
+      - 'contracts/**'
+      - 'internal/protocol/**'
+      - 'internal/directterminal/**'
+      - 'internal/transport/**'
+      - 'internal/gateway/**'
+      - 'internal/app/desktop_terminal.go'
+      - 'internal/app/server.go'
+      - '.github/workflows/desktop-linux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-linux-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux x86_64 client tests and packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/mygo/natives
+          key: mygo-linux-amd64-${{ hashFiles('desktop/go.sum', 'desktop/third_party/mygo-terminal/mygo-plugin.json') }}
+      - name: Install Linux runtime and isolated GUI test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-3-0t64 libwebkit2gtk-4.1-0 libsecret-1-0 \
+            gnome-keyring dbus-x11 xvfb xauth xdotool imagemagick fonts-noto-cjk
+      - name: Format, vet and packaging tests
+        run: |
+          mapfile -t files < <(git ls-files -- '*.go')
+          test -z "$(gofmt -l "${files[@]}")"
+          go vet ./...
+          python3 scripts/test_package_linux.py
+      - name: Build same native client for Linux
+        run: ./scripts/build-linux.sh
+      - name: Test UI, bundled terminal, transport and file boundaries
+        run: |
+          export MYGO_GHOSTTY_VT="$PWD/build/linux-amd64/libghostty-vt.so"
+          go test -count=1 -timeout=5m ./...
+      - name: Test local discovery and direct enrollment against an isolated real Relay
+        run: |
+          mkdir -p build/local-relay
+          go -C .. build -o "$PWD/build/local-relay/herdr-mobile-relay" ./cmd/herdr-mobile-relay
+          HERDR_TEST_RELAY_BINARY="$PWD/build/local-relay/herdr-mobile-relay" \
+            go test -race -count=1 -timeout=2m -run '^TestLocalActual' ./internal/relay
+      - name: Native GTK and credential-store smoke test
+        run: ./scripts/smoke-linux.sh
+      - name: Verify Debian and portable packages, record source and hashes
+        run: python3 scripts/package-linux.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: herdr-desktop-linux-amd64-${{ github.run_number }}
+          path: desktop/build/artifacts-linux-amd64/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: herdr-desktop-linux-smoke-${{ github.run_number }}
+          path: desktop/build/linux-smoke/
+          if-no-files-found: ignore
+          retention-days: 7

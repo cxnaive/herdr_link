@@ -3,6 +3,7 @@ module github.com/cxnaive/herdr-desktop
 go 1.27.3
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/egoist/mygo v0.8.1
 	github.com/egoist/mygo/herdr-terminal v0.8.1
 	golang.org/x/image v0.46.0

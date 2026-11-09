@@ -184,7 +184,11 @@ func serveFixture(conn net.Conn, relayID string, routing, secret, credential []b
 	if err = sendJSON(Message{"type": "ready"}); err != nil {
 		return err
 	}
-	b, err = w.logicalRead()
+	return serveAuthenticatedFixture(w, secret, credential, kind, rpc)
+}
+
+func serveAuthenticatedFixture(w logicalWire, secret, credential []byte, kind string, rpc bool) error {
+	b, err := w.logicalRead()
 	if err != nil {
 		return err
 	}
@@ -261,7 +265,7 @@ func serveFixture(conn net.Conn, relayID string, routing, secret, credential []b
 		return err
 	}
 	if !rpc {
-		_, _, err = w.read()
+		_, err = w.logicalRead()
 		if err == nil {
 			return io.ErrUnexpectedEOF
 		}

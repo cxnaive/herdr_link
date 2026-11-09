@@ -6,7 +6,7 @@ Android and Relay builds. Manual dispatch selects `all`, `native`, or `android`.
 Selected builds produce Relay/Gateway for Linux/macOS amd64/arm64 or Herdr Pocket
 for three Android ABIs. Existing Android signing and publication checks remain in
 place. This workflow does not deploy or publish releases. Android/native build
-artifacts expire after **one day**; Windows desktop ZIPs expire after **seven days**.
+artifacts expire after **one day**; Windows desktop ZIPs and Linux desktop packages expire after **seven days**.
 
 ## 日常 CI 与深度检查
 
@@ -14,7 +14,7 @@ artifacts expire after **one day**; Windows desktop ZIPs expire after **seven da
 - 完整竞态检测、journald 验收、浏览器、多平台发布包、手机测试分片与 Android/iOS 模拟器改为 **Actions → check → Run workflow → full=true**。测试内容和发布验收标准没有删减。
 - 新提交取消相同分支/PR 尚未完成的旧 CI，保留最新提交。正式发布依然使用完成且成功的精确构建；上游 `v*` 发布要求成功的 `check · deep`。
 - `build-artifacts` 自动构建发生变化的组件；同时发布 Android 与 Native 时，可手动选择 `all` 从同一提交生成两类产物。
-- Windows 客户端由独立的 `desktop-windows` 自动测试并打包，下载入口见 [桌面 CI](../desktop/README.md#自动构建)。
+- Windows 客户端由独立的 `desktop-windows` 自动测试并打包；Linux x86_64 使用 `desktop-linux`，验证包内终端库、GTK/PDF/独立钥匙环，以及无 Gateway 的真实 Relay 本机配对/重连后生成 `.deb` 和用户安装压缩包。两者不发布或部署，下载入口见 [桌面 CI](../desktop/README.md#自动构建)。
 
 ## Release 发布：只走 GitHub Actions
 

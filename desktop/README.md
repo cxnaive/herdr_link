@@ -1,14 +1,27 @@
 # Herdr Desktop
 
-Windows / macOS 桌面客户端。界面采用 MyGo 原生 Go UI，功能和配对流程参考仓库内的 Kotlin Android 客户端。
+Windows / Linux / macOS 桌面客户端。Linux 与 Windows 使用同一套应用代码，不是网页套壳或精简版。界面采用 MyGo 原生 Go UI，功能和配对流程参考仓库内的 Kotlin Android 客户端。
 
 ## 使用
 
-1. 打开 `build/windows-amd64/Herdr Desktop.exe`，同目录保留 `ghostty-vt.dll`。
+1. Windows 打开 `build/windows-amd64/Herdr Desktop.exe`，同目录保留 `ghostty-vt.dll`；Linux 从应用菜单或 `herdr-desktop` 启动，安装方式见下文。
 2. 点击「添加电脑」，粘贴该电脑生成的 `herdr-tcp://` 一次性邀请。邀请有效期以 Relay 为准。
 3. 在左侧选择电脑、项目和 Agent。中间切换「对话」「终端」，右上角「文件」打开当前工作区。
 
-配对信息和草稿加密存储在系统用户配置目录下的 `Herdr Desktop/state.enc`；密钥保存在 Windows Credential Manager / macOS Keychain。请为桌面端单独生成邀请。
+配对信息和草稿加密存储在系统用户配置目录下的 `Herdr Desktop/state.enc`；密钥保存在 Windows Credential Manager / macOS Keychain / Linux Secret Service（如 GNOME Keyring）。请为桌面端单独生成邀请。
+
+## Linux 连接本机 Relay
+
+在「添加电脑」中点击 **查找本机 Relay → 连接本机**。首次启动且还没有配对电脑时会自动查找，但**不会自动创建配对**。多个运行实例分别列出；名称可以在上方填写，留空使用“本机 Relay”。
+
+- 直接复用现有 Relay API：对话、原生终端、状态、文件和管理请求走 `127.0.0.1` / `::1` 上的 **E2EE WebSocket**，不经过远端 Gateway。Gateway 暂时不可达不影响本机连接。
+- 首次点击通过该 Relay 的私有 `tcp-pair/admin.sock` 申请独立设备邀请，再完成正常设备鉴权、加密存储和凭据确认。不是导入手机密钥，不打开 `relay.env`、`devices.json`，也不提取或存储 Relay 的主密钥及注册密钥。
+- Linux 只读检查当前用户的 Relay 进程、必要的启动环境路径/端口，以及 socket 权限和内核 `SO_PEERCRED`。不扫描网络，不连接其他用户的服务，不接受未鉴权的明文 Relay。发现本身不创建邀请。
+- 同一个 Relay 已通过远程方式配对时复用现有电脑身份、名称、草稿和设备角色，只把此客户端的连接切到本机；不会把只读角色升级成控制者。以后重启客户端会继续使用保存的本机连接。
+- Relay 重启后重新确认进程和当前端口，复用设备凭据。socket 被替换成不可信对象、被撤销的凭据或服务不可用时明确失败，不静默改走 Gateway，也不自动重新授权。
+- 当前支持提供私有配对 socket 的 **原生 TCP Relay**（包括现有 codexfix.19），无需更新 Relay。需要同一 Linux 用户、可读取其 `/proc` 元数据，且服务在回环地址可访问。容器中跨 PID/用户空间、以其他用户运行、纯无 token 或未提供私有配对接口的 Relay 不自动连接，仍可使用远程邀请。
+
+普通 TCP 远程配对入口仍然保留。本机直连不是绕过权限：文件范围、控制权、停止/重启 Agent 等都继续由 Relay 的原有授权规则检查。
 
 ## 外观
 
@@ -58,9 +71,35 @@ Relay 的 `source_truncated` 只表示本页从日志尾部开始读取，不等
 
 推送到仓库主分支 `feat/android-file-companion` 后，桌面源码或相关 Relay 协议变化会自动运行 [`desktop-windows`](../.github/workflows/desktop-windows.yml)：检查格式、vet、构建 Windows amd64，并运行界面、原生终端、连接及文件下载测试。PR 也会验证；可在 Actions 手动运行。
 
+Linux 的独立构建与依赖见下方章节。
+
 从 **Actions → desktop-windows → 成功的构建 → Artifacts** 下载 `herdr-desktop-windows-amd64-<构建编号>`，内含版本化 ZIP 和 SHA-256。解压后同时保留 `Herdr Desktop.exe` 和 `ghostty-vt.dll`。包内 `BUILD-INFO.json` 记录精确源码提交和文件散列；产物保留 7 天。当前为未签名便携包，自动构建不会创建 Release、标签或修改服务器。Mac 暂时使用本地交叉构建。
 
-## 本地构建
+## Linux x86_64
+
+提供两种安装方式，界面、电脑/项目/Agent 分组、对话与审批、原生终端、附件、文件/PDF 预览和外观设置均复用 Windows 版。
+
+- **Debian / Ubuntu**：下载 `herdr-desktop_0.1.0_amd64.deb`，执行 `sudo apt install ./herdr-desktop_0.1.0_amd64.deb`，从应用菜单打开 **Herdr Desktop**，或执行 `herdr-desktop`。
+- **不需要 root 的用户安装**：把 `install.sh` 和 `herdr-desktop-0.1.0-linux-amd64.tar.gz` 放在同一目录，执行 `sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz`，再运行 `~/.local/bin/herdr-desktop`。安装到 `~/.local`；`sh install.sh --uninstall` 卸载应用但保留配对/草稿数据。
+- **直接试用**：解压到一个独立目录，执行 `./herdr-desktop --demo`。必须保留同目录的 `libghostty-vt.so` 和图标资源。演示模式使用虚构数据，不读取真实配对。
+
+运行环境需要 **GTK 3、WebKitGTK 4.1、libsecret 和正在运行的 Secret Service**。`.deb` 会声明前三项库依赖；普通桌面一般已有 GNOME Keyring，KWallet / KeePassXC 需启用 Secret Service。最小化桌面可安装、启动并解锁 GNOME Keyring。缺少或未解锁钥匙环时不降级成明文保存；先处理系统钥匙环，再启动客户端。纯 SSH、没有图形会话的服务器不适合运行此 GUI。
+
+Linux 包由独立的 [`desktop-linux`](../.github/workflows/desktop-linux.yml) 构建；推送或 PR 涉及桌面/终端协议时自动触发，也可手动运行。从成功运行的 Artifacts 下载 `herdr-desktop-linux-amd64-<构建编号>`，内含 `.deb`、`.tar.gz`、用户安装脚本、`BUILD-INFO.json` 和 `SHA256SUMS.txt`，保留 7 天。校验：`sha256sum -c SHA256SUMS.txt`。**目前是未签名开发预览，不自动发布 Release，也不部署 Relay。** 本地构建若含未提交修改，元数据会明确记录 `source_dirty: true`；CI 包要求源码干净。
+
+自动验证基线为 Ubuntu 24.04 x86_64：使用包内固定哈希的终端库跑桌面测试，在独立 Xvfb / D-Bus / HOME 中检查用户安装/卸载保留数据、真实 GTK 窗口、钥匙环和系统 PDF 渲染；Linux PTY 测试覆盖中文输入和尺寸变化。其他发行版、Wayland 会话、真实中文输入法以及 ARM64 仍需另行验证；PDF 能力依赖系统 WebKitGTK 版本。
+
+```sh
+cd desktop
+./scripts/build-linux.sh
+MYGO_GHOSTTY_VT="$PWD/build/linux-amd64/libghostty-vt.so" go test ./...
+python3 scripts/test_package_linux.py
+./scripts/smoke-linux.sh  # 需要 xvfb、dbus-run-session、gnome-keyring、xdotool、ImageMagick
+python3 scripts/package-linux.py
+# 可安装包在 build/artifacts-linux-amd64/；这不会发布或上传。
+```
+
+## 本地构建（Windows / macOS）
 
 ```powershell
 cd desktop

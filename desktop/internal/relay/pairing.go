@@ -24,12 +24,13 @@ type Auth struct {
 }
 
 type Computer struct {
-	ID         string
-	Name       string
-	Address    string
-	RelayID    string
-	Rendezvous string
-	Auth       Auth
+	LocalSocket string
+	ID          string
+	Name        string
+	Address     string
+	RelayID     string
+	Rendezvous  string
+	Auth        Auth
 }
 
 func NewID() string {

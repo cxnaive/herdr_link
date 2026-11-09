@@ -5,5 +5,18 @@
   "main": ".",
   "out": "build",
   "icon": "resources/icon.png",
-  "license": "AGPL-3.0-or-later"
+  "license": "AGPL-3.0-or-later",
+  "slug": "herdr-desktop",
+  "linux": {
+    "comment": "Native desktop client for Herdr agents, conversations and terminals",
+    "categories": [
+      "Development",
+      "Utility"
+    ],
+    "command": "herdr-desktop",
+    "webview": true,
+    "depends": [
+      "libsecret-1-0"
+    ]
+  }
 }

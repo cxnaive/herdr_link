@@ -13,7 +13,7 @@ Read `README.md` and `QUICKSTART.md` before changing behavior. `docs/` holds the
 ## This fork's Android / Native component releases
 
 - This fork's actual default branch is `feat/android-file-companion`; `dev` and `main` are upstream conventions and currently do not exist here. Use the existing default branch when the user requests synchronization to the main branch, without creating or renaming branches unnecessarily.
-- Routine CI selects changed components. Full race, browser and mobile-device qualification are manual via `check.yml` with `full=true`; do not restore them to every push without a user request. Windows desktop validation and ZIP builds use `desktop-windows.yml`.
+- Routine CI selects changed components. Full race, browser and mobile-device qualification are manual via `check.yml` with `full=true`; do not restore them to every push without a user request. Windows desktop validation and ZIP builds use `desktop-windows.yml`; Linux x86_64 desktop validation and Debian/user-local packages use `desktop-linux.yml`.
 
 - `android-*` / `native-*` releases use `.github/workflows/publish-components.yml` on `feat/android-file-companion`, not the upstream `v*` plugin lane above.
 - Always reuse a successful trusted `build-artifacts` run. Dispatch a read-only rehearsal first, then explicitly publish the same run ID. Never build, re-sign, download/re-upload release assets through the operator's computer.

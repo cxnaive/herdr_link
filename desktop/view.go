@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -54,12 +55,17 @@ func statusLabel(s string) string {
 }
 func (a *application) pairView(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Fill().Padding(40).Gap(18).Children(func() {
+	ui.Scroll(c).Fill().Padding(40).Gap(18).Children(func() {
 		ui.Text(c, "连接你的电脑").FontSize(26).Bold()
-		ui.Text(c, "粘贴邀请链接，连接运行 Agent 的电脑。").TextColor(t.TextMuted)
+		intro := "粘贴邀请链接，连接运行 Agent 的电脑。"
+		if runtime.GOOS == "linux" {
+			intro = "连接本机 Relay，或粘贴邀请连接远程电脑。"
+		}
+		ui.Text(c, intro).TextColor(t.TextMuted).Wrap()
 		ui.Text(c, "电脑名称").FontSize(12)
-		ui.TextInput(c, &a.pairName).Placeholder("例如：MacBook Pro").Label("电脑名称").MaxWidth(620)
-		ui.Text(c, "配对邀请").FontSize(12)
+		ui.TextInput(c, &a.pairName).Placeholder("例如：开发电脑").Label("电脑名称").MaxWidth(620)
+		a.localRelayView(c)
+		ui.Text(c, "远程电脑邀请").FontSize(12)
 		ui.TextInput(c, &a.pairLink).Password().Placeholder("herdr-tcp://…").Label("配对邀请").MaxWidth(620)
 		ui.Text(c, "邀请链接有效期为 10 分钟。").FontSize(12).TextColor(t.TextMuted).MaxWidth(620)
 		ui.Row(c).Gap(10).Children(func() {
@@ -67,14 +73,13 @@ func (a *application) pairView(c *ui.Context) {
 			if a.pairBusy {
 				label = "正在保存…"
 			}
-			if ui.PrimaryButton(c, label).Disabled(a.pairBusy || a.store == nil || a.pairLink == "").Clicked() {
+			if ui.PrimaryButton(c, label).Disabled(a.pairBusy || a.local.connecting || a.store == nil || a.pairLink == "").Clicked() {
 				a.pair()
 			}
-			if len(a.machines) > 0 && ui.Button(c, "返回工作台").Clicked() {
+			if len(a.machines) > 0 && ui.Button(c, "返回工作台").Disabled(a.pairBusy || a.local.connecting).Clicked() {
 				a.pairing = false
 			}
 		})
-		ui.Spacer(c)
 		ui.Text(c, "连接信息加密保存在此设备。").FontSize(12).TextColor(t.TextMuted)
 	})
 }

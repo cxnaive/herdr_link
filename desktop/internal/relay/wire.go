@@ -12,6 +12,16 @@ import (
 const maxMessage = 21 * 1024 * 1024
 const maxRecord = 1024*1024 + 6
 
+// logicalWire keeps E2EE, request ordering and terminal streams identical on
+// the gateway and authenticated local WebSocket routes.
+type logicalWire interface {
+	logicalWrite([]byte) error
+	logicalRead() ([]byte, error)
+	close()
+}
+
+func (w *wire) close() { _ = w.conn.Close() }
+
 type wire struct {
 	conn net.Conn
 	mu   sync.Mutex
