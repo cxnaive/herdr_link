@@ -159,7 +159,7 @@ func TestPollerRequiredFetchFailuresAccumulateAndRecover(t *testing.T) {
 func TestPollerOptionalFetchFailuresDoNotBackOff(t *testing.T) {
 	var optionalFailures atomic.Bool
 	socketPath := startPollerTestSocket(t, func(method string) (any, string) {
-		if optionalFailures.Load() && (method == "tab.list" || method == "pane.list") {
+		if optionalFailures.Load() && method == "tab.list" {
 			return nil, "optional_fetch_failed"
 		}
 		return pollerSuccessResult(method), ""

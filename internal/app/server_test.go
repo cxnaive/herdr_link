@@ -1399,7 +1399,12 @@ func TestProductionEventInventoryRecoveryDrainsRefreshAcrossReconnect(t *testing
 					if inventoryCalls.Load() == 1 {
 						close(pollReady)
 					}
-				case "tab.list", "pane.list":
+				case "pane.list":
+					serveErr = encoder.Encode(map[string]any{
+						"id":     request.ID,
+						"result": map[string]any{"type": "pane_list", "panes": []any{pane}},
+					})
+				case "tab.list":
 					serveErr = encoder.Encode(map[string]any{
 						"id":    request.ID,
 						"error": map[string]any{"code": "unsupported", "message": "fixture omits topology detail"},
@@ -1722,7 +1727,12 @@ func TestProductionPollInventoryRecoveryCommitsWithoutListeners(t *testing.T) {
 					case 5:
 						close(unchanged)
 					}
-				case "tab.list", "pane.list":
+				case "pane.list":
+					serveErr = encoder.Encode(map[string]any{
+						"id":     request.ID,
+						"result": map[string]any{"type": "pane_list", "panes": []any{pane}},
+					})
+				case "tab.list":
 					serveErr = encoder.Encode(map[string]any{
 						"id":    request.ID,
 						"error": map[string]any{"code": "unsupported", "message": "fixture omits topology detail"},

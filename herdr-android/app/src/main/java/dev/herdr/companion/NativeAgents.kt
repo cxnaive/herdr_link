@@ -130,7 +130,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
     fun fileAccessChanged(id: String) { if (relay == id) { reviewer?.close(); reviewer = null; conversationImages.clear(); if (active) render() } }
     fun destroy() { pause(); transientToast?.cancel(); speech?.stop(); speech?.shutdown(); conversationImages.close(); conversationCache.clear(); io.shutdown() }
     fun back(): Boolean { if (selected == null) return false; rememberConversation(); saveDraft(); stopStreams(); selected = null; render(); return true }
-    fun open(relayId: String, agent: JSONObject) { rememberConversation(); saveDraft(); stopStreams(); composer = null; relay = relayId; selected = JSONObject(agent.toString()); runPresentation.clear(); terminalHistoryLines = 500; terminalHasMore = true; terminalHistoryMessage = ""; terminalSavedY = 0; terminalFollowing = true; terminalScroll = null; loadingOlderTerminal = false; terminalReadPending = false; expandedToolGroups.clear(); expandedToolItems.clear(); conversationImages.clear(); mode = "conversation"; conversation = if (agent.optString("binding_state") == "conflict") ConversationState() else conversationCache.get(WorkspaceBinding.fromAgent(relayId, agent)) ?: ConversationState(); resumeOlderAfterReconnect = false; historyMessage = ""; attachments = JSONArray(); content = ""; fingerprint = ""; frame = JSONObject(); uploading = false; uiDraft = vault.read(draftKey()).orEmpty(); if (active) render() }
+    fun open(relayId: String, agent: JSONObject) { rememberConversation(); saveDraft(); stopStreams(); composer = null; relay = relayId; selected = JSONObject(agent.toString()); runPresentation.clear(); terminalHistoryLines = 500; terminalHasMore = true; terminalHistoryMessage = ""; terminalSavedY = 0; terminalFollowing = true; terminalScroll = null; loadingOlderTerminal = false; terminalReadPending = false; expandedToolGroups.clear(); expandedToolItems.clear(); conversationImages.clear(); mode = if (AgentPresentation.terminalOnly(agent)) "terminal" else "conversation"; conversation = if (agent.optString("binding_state") == "conflict") ConversationState() else conversationCache.get(WorkspaceBinding.fromAgent(relayId, agent)) ?: ConversationState(); resumeOlderAfterReconnect = false; historyMessage = ""; attachments = JSONArray(); content = ""; fingerprint = ""; frame = JSONObject(); uploading = false; uiDraft = vault.read(draftKey()).orEmpty(); if (active) render() }
     private fun name(agent: JSONObject) = AgentPresentation.title(agent)
     private fun current(): JSONObject? { val captured = selected ?: return null; val rows = inventory()[relay] ?: return null; return (0 until rows.length()).map { rows.getJSONObject(it) }.find { WorkspaceBinding.fromAgent(relay, it) == WorkspaceBinding.fromAgent(relay, captured) } }
     private fun role(id: String = relay) = engine.snapshot().optJSONObject("auth")?.optJSONObject("relays")?.optJSONObject(id)?.optString("role") ?: "reader"
@@ -184,7 +184,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
                     val rows = inventory()[relay] ?: JSONArray()
                     val updated = (0 until rows.length()).map { rows.getJSONObject(it) }.singleOrNull { PrimarySessionBinding.sameIdentity(relay, captured, it) }
                     if (updated == null) {
-                        val replacement = (0 until rows.length()).map { rows.getJSONObject(it) }.singleOrNull { PrimarySessionBinding.relayReplacement(relay, captured, it) }
+                        val replacement = (0 until rows.length()).map { rows.getJSONObject(it) }.singleOrNull { PrimarySessionBinding.relayReplacement(relay, captured, it) || PrimarySessionBinding.terminalTransition(relay, captured, it) }
                         if (replacement != null) { open(relay, replacement); return }
                         rememberConversation(); saveDraft(); stopStreams(); conversation = ConversationState(); renderConversation()
                         stateLabel?.text = "此 Agent 会话已被替换。请返回列表重新打开。"; sendButton?.isEnabled = false
@@ -320,12 +320,12 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
                 card.addView(cardHeader)
                 val status = when (agent.optString("status")) { "blocked" -> "需要处理"; "working" -> "运行中"; "done" -> "已完成"; else -> "空闲" }
                 val statusColor = when (agent.optString("status")) { "working", "done" -> accent; "blocked" -> AgentStyle.warning; else -> muted }
-                card.addView(label("${agent.optString("agent")} · $status" + if (agents.size > 1) " · ${agent.optString("pane_id")}" else "", 12, statusColor).apply { setPadding(0, 0, 0, dp(6)) })
+                card.addView(label("${AgentPresentation.provider(agent)} · $status" + if (agents.size > 1) " · ${agent.optString("pane_id")}" else "", 12, statusColor).apply { setPadding(0, 0, 0, dp(6)) })
                 if (runCatching { MonitorPreferences(context).muted(MonitorIdentity.key(group.relay, agent)) }.getOrDefault(false)) card.addView(label("完成提醒已关闭", 11, muted))
                 if (agent.optString("cwd") != group.path) card.addView(label(agent.optString("cwd"), 11, muted))
                 if (agent.optString("status") == "blocked") card.addView(label(agent.optString("prompt").take(220), 13, textInk))
                 val actions = row()
-                actions.addView(AgentStyle.button(context, "打开对话", subtle = true) { open(group.relay, agent) }, weight())
+                if (!AgentPresentation.terminalOnly(agent)) actions.addView(AgentStyle.button(context, "打开对话", subtle = true) { open(group.relay, agent) }, weight())
                 actions.addView(AgentStyle.button(context, "终端", subtle = true) { open(group.relay, agent); mode = "terminal"; render() }, weight())
                 actions.addView(AgentStyle.button(context, "工作区", subtle = true) { workspace(group.relay, agent) }, weight())
                 card.addView(actions)
@@ -339,7 +339,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
         val agent = selected ?: return
         identityTitle?.text = name(agent)
         bindingLabel?.text = if (mode == "terminal") PrimarySessionBinding.terminalLabel(agent) else PrimarySessionBinding.label(agent)
-        bindingLabel?.visibility = if (agent.optString("binding_state").isBlank()) View.GONE else View.VISIBLE
+        bindingLabel?.visibility = if (agent.optString("binding_state").isBlank() && !AgentPresentation.terminalOnly(agent)) View.GONE else View.VISIBLE
         identitySubtitle?.text = "${relayName(relay)} · ${workspaceTitle(relay, agent)} · ${agent.optString("cwd")}"
     }
     private fun renderAgent() {
@@ -360,6 +360,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
         layout.addView(header, LinearLayout.LayoutParams(-1, dp(64)))
         val tabs = row().apply { setPadding(0, dp(2), 0, dp(2)) }
         for ((id, title) in listOf("conversation" to "对话", "terminal" to "终端", "workspace" to "工作区")) {
+            if (id == "conversation" && AgentPresentation.terminalOnly(agent)) continue
             tabs.addView(TextView(context).apply {
                 text = title; textSize = 13f; gravity = Gravity.CENTER; isFocusable = true
                 setTextColor(if (id == mode) accent else muted); setTypeface(typeface, if (id == mode) Typeface.BOLD else Typeface.NORMAL)
@@ -370,7 +371,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
         }; layout.addView(tabs)
         bindingLabel = label(if (mode == "terminal") PrimarySessionBinding.terminalLabel(agent) else PrimarySessionBinding.label(agent), 12, muted).apply {
             setPadding(dp(2), dp(6), dp(2), dp(6))
-            visibility = if (agent.optString("binding_state").isBlank()) View.GONE else View.VISIBLE
+            visibility = if (agent.optString("binding_state").isBlank() && !AgentPresentation.terminalOnly(agent)) View.GONE else View.VISIBLE
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }.also { layout.addView(it) }
         runStatusView = AgentRunStatusView(context) {

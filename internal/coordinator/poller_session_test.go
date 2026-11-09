@@ -63,8 +63,8 @@ func TestTopologyCacheCannotRevertPolledNativeSession(t *testing.T) {
 			}
 			active.Store(false)
 			poller.commitEventTopology(context.Background(), herdr.TopologySnapshot{Panes: []herdr.Pane{cached}}, state.RevisionCounter())
-			if agent, ok := state.Agent("pane"); ok {
-				t.Fatalf("cached topology resurrected a departed agent: %+v", agent)
+			if agent, ok := state.Agent("pane"); !ok || agent.Agent != "" || agent.SessionID != "" || agent.ReportedSession.Value != "" || agent.TerminalID != pane.TerminalID {
+				t.Fatalf("departed agent should leave a terminal without its old session: %+v", agent)
 			}
 		})
 	}

@@ -17,6 +17,7 @@ import (
 )
 
 type AgentState struct {
+	TerminalOnly      bool                   `json:"terminal_only,omitempty"`
 	RunState          *codexruntime.RunState `json:"run_state,omitempty"`
 	BindingSelection  string                 `json:"-"`
 	BindingMode       string                 `json:"-"`
@@ -561,7 +562,7 @@ func (s *State) commitInventoryLocked(agents []*AgentState, baseRev int64) {
 
 		pendingTimestamp := false
 		if pending, ok := s.pendingEvents[incoming.PaneID]; ok {
-			if incoming.BindingState == "" && time.Now().Before(pending.expiresAt) &&
+			if !incoming.TerminalOnly && incoming.BindingState == "" && time.Now().Before(pending.expiresAt) &&
 				eventIdentityMatches(incoming, pending.tabID, pending.workspaceID) {
 				cp.Status = pending.status
 				cp.UpdatedAt = pending.updatedAt
@@ -612,7 +613,7 @@ func (s *State) commitInventoryLocked(agents []*AgentState, baseRev int64) {
 		s.agents[incoming.PaneID] = &cp
 		s.prevStatus[incoming.PaneID] = cp.Status
 		s.registerTransition(incoming.PaneID, prev, cp.Status, previousAttention)
-		if !exists && (doneStatuses[cp.Status] || cp.Status == "idle") {
+		if !cp.TerminalOnly && !exists && (doneStatuses[cp.Status] || cp.Status == "idle") {
 			if cp.LastActiveAt > cp.LastSeenAt {
 				s.unseenDone[incoming.PaneID] = true
 				delete(s.ackDone, incoming.PaneID)
@@ -665,6 +666,9 @@ func (s *State) commitInventoryLocked(agents []*AgentState, baseRev int64) {
 func paneSessionReplaced(existing, incoming *AgentState) bool {
 	if existing == nil || incoming == nil {
 		return false
+	}
+	if existing.Agent != incoming.Agent || existing.TerminalOnly != incoming.TerminalOnly {
+		return true
 	}
 	initialProof := existing.BindingState != "" && incoming.BindingState != "" && existing.SessionID == "" && existing.ConversationProcess == "" && existing.TerminalID != "" && existing.TerminalID == incoming.TerminalID && existing.Cwd == incoming.Cwd
 	if (!initialProof && existing.ConversationProcess != incoming.ConversationProcess) || (!initialProof && existing.BindingStoreID != incoming.BindingStoreID) || (existing.ConversationSource != incoming.ConversationSource && (existing.BindingState == "" || incoming.BindingState == "")) {
@@ -720,7 +724,7 @@ func (s *State) CommitEventForSession(
 		}
 		return false
 	}
-	if agent.Agent == "codex" && agent.BindingState != "" {
+	if agent.TerminalOnly || agent.Agent == "codex" && agent.BindingState != "" {
 		return false
 	}
 	if !eventIdentityMatches(agent, tabID, workspaceID) {

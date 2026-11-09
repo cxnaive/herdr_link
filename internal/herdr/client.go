@@ -221,6 +221,8 @@ type AgentSession struct {
 }
 
 type Pane struct {
+	// Relay projection metadata; never decoded from Herdr responses.
+	TerminalOnly          bool   `json:"-"`
 	TerminalTitle         string `json:"terminal_title,omitempty"`
 	TerminalTitleStripped string `json:"terminal_title_stripped,omitempty"`
 	ID                    string `json:"pane_id"`

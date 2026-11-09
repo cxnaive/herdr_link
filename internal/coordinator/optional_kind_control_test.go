@@ -51,17 +51,17 @@ func TestAuthoritativeOptionalKindInventory(t *testing.T) {
 					poller.poll(ctx)
 					return
 				}
-				poller.commitEventTopology(ctx, herdr.TopologySnapshot{Panes: []herdr.Pane{{ID: "shell", Agent: "hermes"}}}, state.RevisionCounter())
+				poller.commitEventTopology(ctx, herdr.TopologySnapshot{Panes: []herdr.Pane{{ID: "shell", TerminalID: "shell-terminal", Agent: "hermes"}}}, state.RevisionCounter())
 			}
 			assertKind := func(kind string) {
 				t.Helper()
 				refresh()
 				row, ok := state.Agent("pane")
-				if !ok || row.Agent != kind || row.TerminalID != "terminal" || row.Name != "Named agent" || row.Cwd != "/home/example/Development" || row.Project != "Development" || row.Session != "" {
+				if !ok || row.TerminalOnly || row.Agent != kind || row.TerminalID != "terminal" || row.Name != "Named agent" || row.Cwd != "/home/example/Development" || row.Project != "Development" || row.Session != "" {
 					t.Fatalf("authoritative agent row was dropped or guessed: %+v present=%v", row, ok)
 				}
-				if _, ok := state.Agent("shell"); ok {
-					t.Fatal("pane.list or cached topology promoted a shell")
+				if shell, ok := state.Agent("shell"); !ok || !shell.TerminalOnly || shell.Agent != "" {
+					t.Fatal("shell missing or promoted to an active agent")
 				}
 				if publications == 0 || state.InventoryStatus()["state"] != "ready" {
 					t.Fatal("inventory was not published ready")

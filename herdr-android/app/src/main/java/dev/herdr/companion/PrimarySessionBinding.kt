@@ -4,7 +4,7 @@ import org.json.JSONObject
 
 /** Session identity survives temporary loss of proof; permission to interact does not. */
 object PrimarySessionBinding {
-    fun writable(agent: JSONObject?): Boolean = agent != null && (agent.optString("agent") != "codex" || agent.optString("binding_state") in setOf("", "verified"))
+    fun writable(agent: JSONObject?): Boolean = agent != null && !AgentPresentation.terminalOnly(agent) && (agent.optString("agent") != "codex" || agent.optString("binding_state") in setOf("", "verified"))
     private val terminalActions = setOf("send_terminal_text", "send_text", "send_keys", "send_input", "send_filter_text", "send_secret", "lease_pane_size")
     private val lifecycleActions = setOf("agent_stop", "agent_restart", "agent_clear", "agent_rename")
     fun terminalWritable(agent: JSONObject?): Boolean = agent != null && agent.optString("pane_id").isNotBlank() && agent.optString("terminal_id").isNotBlank()
@@ -17,6 +17,7 @@ object PrimarySessionBinding {
     fun readable(agent: JSONObject?): Boolean = writable(agent)
     fun live(agent: JSONObject?): Boolean = writable(agent)
     fun label(agent: JSONObject): String {
+        if (AgentPresentation.terminalOnly(agent)) return "当前是终端，没有运行中的 Agent；可以直接输入命令。"
         if (agent.optString("agent").let { it.isNotBlank() && it != "codex" }) return ""
         when (agent.optString("binding_reason")) {
             "standalone_runtime_unavailable" -> return "Codex 内嵌/独立运行时的会话写锁不可读，请检查版本与进程权限"
@@ -51,6 +52,16 @@ object PrimarySessionBinding {
             && before.cwd == after.cwd && before.target.server == after.target.server
             && before.target.pane == after.target.pane && before.target.terminal.isNotBlank()
             && before.target.terminal == after.target.terminal
+    }
+    fun terminalTransition(relay: String, previous: JSONObject, next: JSONObject): Boolean {
+        val before = WorkspaceBinding.fromAgent(relay, previous)
+        val after = WorkspaceBinding.fromAgent(relay, next)
+        return AgentPresentation.terminalOnly(previous) != AgentPresentation.terminalOnly(next)
+            && after.target.generation > before.target.generation
+            && before.target.server == after.target.server && before.target.pane == after.target.pane
+            && before.target.terminal.isNotBlank() && before.target.terminal == after.target.terminal
+            && previous.optString("workspace_id") == next.optString("workspace_id")
+            && previous.optString("tab_id") == next.optString("tab_id")
     }
     fun sameIdentity(relay: String, previous: JSONObject, next: JSONObject): Boolean =
         WorkspaceBinding.fromAgent(relay, previous).identity() == WorkspaceBinding.fromAgent(relay, next).identity()

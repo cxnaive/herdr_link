@@ -30,7 +30,8 @@ func (r *RunEvidence) Trusted() bool {
 }
 
 type Agent struct {
-	RunState *RunEvidence `json:"run_state,omitempty"`
+	TerminalOnly bool         `json:"terminal_only,omitempty"`
+	RunState     *RunEvidence `json:"run_state,omitempty"`
 	Target
 	Agent               string       `json:"agent"`
 	Name                string       `json:"name"`
@@ -65,6 +66,9 @@ func (a Agent) Title() string {
 	return a.Provider()
 }
 func (a Agent) Provider() string {
+	if a.TerminalOnly {
+		return "终端"
+	}
 	switch a.Agent {
 	case "codex":
 		return "Codex"
@@ -98,7 +102,7 @@ func ParseWorkspaces(v any) []Workspace {
 	return rows
 }
 func (a Agent) CanChat() bool {
-	return a.Agent != "codex" || a.BindingState == "" || a.BindingState == "verified"
+	return !a.TerminalOnly && (a.Agent != "codex" || a.BindingState == "" || a.BindingState == "verified")
 }
 func (a Agent) Identity() string {
 	t := a.Target

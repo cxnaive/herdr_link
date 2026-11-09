@@ -8,6 +8,29 @@ class PrimarySessionBindingTest {
     private fun agent(epoch: Long = 1, state: String = "verified") = JSONObject()
         .put("agent", "codex").put("pane_id", "p").put("terminal_id", "t").put("agent_session_id", "session")
         .put("generation", 3).put("cwd", "/project").put("binding_epoch", epoch).put("binding_state", state)
+    @Test fun terminalOnlyHasTerminalAccessWithoutAConversation() {
+        val shell = agent().put("terminal_only", true).put("agent", "").put("agent_session_id", "").put("binding_state", "")
+        assertFalse(PrimarySessionBinding.writable(shell))
+        assertFalse(PrimarySessionBinding.readable(shell))
+        assertTrue(PrimarySessionBinding.terminalWritable(shell))
+        assertTrue(PrimarySessionBinding.operationWritable(shell, "send_terminal_text", terminalView = true))
+        assertTrue(PrimarySessionBinding.operationWritable(shell, "send_keys", terminalView = true))
+        assertFalse(PrimarySessionBinding.operationWritable(shell, "submit_prompt"))
+        assertEquals("终端", AgentPresentation.provider(shell))
+        assertTrue(PrimarySessionBinding.terminalLabel(shell).contains("没有运行中的 Agent"))
+        assertTrue(PrimarySessionBinding.writable(agent().put("agent", ""))) // Unspecified kind is still an agent.
+    }
+    @Test fun followsTerminalLifecycleOnlyWithinTheSameTerminal() {
+        val before = agent()
+        val shell = agent().put("terminal_only", true).put("agent", "").put("agent_session_id", "").put("generation", 4)
+        assertTrue(PrimarySessionBinding.terminalTransition("computer", before, shell))
+        assertTrue(PrimarySessionBinding.terminalTransition("computer", shell, agent().put("generation", 5)))
+        for (field in listOf("terminal_id", "pane_id", "server_session_id", "workspace_id", "tab_id")) {
+            assertFalse(PrimarySessionBinding.terminalTransition("computer", before, JSONObject(shell.toString()).put(field, "different")))
+        }
+        assertFalse(PrimarySessionBinding.terminalTransition("computer", before, JSONObject(shell.toString()).put("generation", 3)))
+        assertFalse(PrimarySessionBinding.terminalTransition("computer", before, agent().put("generation", 4)))
+    }
     @Test fun standaloneFailuresDoNotSuggestAddingNoDaemonAgain() {
         for (reason in listOf("standalone_runtime_unavailable", "standalone_metadata_unavailable", "standalone_ambiguous", "standalone_metadata_conflict", "standalone_ancestry_unavailable")) {
             val unresolved = agent(state = "ambiguous").put("binding_reason", reason)

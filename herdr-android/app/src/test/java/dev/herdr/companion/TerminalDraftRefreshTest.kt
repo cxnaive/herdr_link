@@ -81,6 +81,26 @@ class TerminalDraftRefreshTest {
         } finally { ui.destroy(); controller.pause().stop().destroy() }
     }
 
+    @Test fun agentExitKeepsTheTerminalAndSeparatesDrafts() = withTerminal {
+        editor.setText("old agent draft must not reach shell")
+        agent.put("terminal_only", true).put("agent", "").put("agent_session_id", "")
+            .put("generation", 2).put("binding_state", "").put("binding_epoch", 0)
+        inventory(); layout()
+        assertEquals("terminal", get(ui, "mode"))
+        assertEquals("", editor.text.toString())
+        assertTrue((get(ui, "selected") as JSONObject).getBoolean("terminal_only"))
+        assertEquals("terminal-instance", (get(ui, "selected") as JSONObject).getString("terminal_id"))
+        assertTrue(ui.back())
+        ui.open("fixture", agent); layout()
+        assertEquals("terminal", get(ui, "mode")) // Also works without remembering the former agent.
+        editor.setText("shell draft must not reach new agent")
+        agent.put("terminal_only", false).put("agent", "codex").put("agent_session_id", "new-session")
+            .put("generation", 3).put("binding_state", "verified").put("binding_epoch", 1)
+        inventory(); layout()
+        assertEquals("conversation", get(ui, "mode"))
+        assertEquals("", editor.text.toString())
+    }
+
     @Test fun snapshotsAndInventoryNeverRestartAnActiveChineseComposition() = withTerminal("ambiguous") {
         val input = editor
         input.requestFocus(); layout()

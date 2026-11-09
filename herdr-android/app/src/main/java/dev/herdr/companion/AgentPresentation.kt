@@ -4,9 +4,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object AgentPresentation {
+    fun terminalOnly(agent: JSONObject): Boolean = agent.optBoolean("terminal_only")
+    fun provider(agent: JSONObject): String = if (terminalOnly(agent)) "终端" else agent.optString("agent").ifBlank { "Agent" }
     data class Group(val relay: String, val server: String, val id: String, val title: String, val path: String, val number: Int, val agents: List<JSONObject>)
     fun title(agent: JSONObject): String = agent.optString("tab_label").ifBlank { agent.optString("tab_name") }
-        .ifBlank { agent.optString("name") }.ifBlank { agent.optString("agent", "Agent") }
+        .ifBlank { agent.optString("name") }.ifBlank { provider(agent) }
     fun server(agent: JSONObject) = agent.optString("server_session_id").ifBlank { "primary" }
     fun workspaceTitle(relay: String, agent: JSONObject, workspaces: Map<String, JSONArray>): String =
         workspaceTitle(agent, workspaceMetadata(relay, agent, workspaces))

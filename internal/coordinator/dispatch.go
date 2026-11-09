@@ -403,6 +403,9 @@ func (d *Dispatcher) deliverPrompt(ctx context.Context, token WorkerToken, text 
 	if err := ctx.Err(); err != nil {
 		return errors.Join(herdr.ErrNotStarted, err)
 	}
+	if agent, ok := d.state.Agent(token.PaneID); ok && agent.TerminalOnly {
+		return errors.Join(herdr.ErrNotStarted, errors.New("No active agent; use terminal input"))
+	}
 	if !requiresEnter {
 		return d.herdr.Prompt(ctx, token.PaneID, text)
 	}

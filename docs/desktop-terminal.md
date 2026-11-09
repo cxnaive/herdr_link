@@ -31,3 +31,19 @@ The desktop uses existing `workspace_list`, `workspace_file_read` and `workspace
 ## Validation
 
 Windows runs the desktop's headless native UI, Ghostty stream, transport and file tests. Linux/WSL runs the Unix socket adapter and existing Codex terminal authority tests. The root server module remains Linux/macOS only; its Windows syscall build failures are unrelated to the desktop's independent module. A socket fixture is not a deployment test: validate against a live protocol-22 Herdr before distributing this preview.
+
+## Retained terminal panels
+
+Exiting an Agent (for example with `/exit`) does not close its Herdr terminal.
+Relay combines the active `agent.list` with terminal-backed entries from
+`pane.list` / the session topology. Panels without an active Agent remain in
+inventory with `terminal_only: true`, their original pane/terminal/workspace IDs,
+and no conversation session or binding. Missing Agent kind alone does not mean
+terminal-only: an untyped entry in `agent.list` remains an Agent.
+
+Android and desktop label these entries as terminals and open the terminal view.
+Terminal reads and input remain available under the existing device permissions.
+Exiting or restarting an Agent advances the target generation, so old prompts,
+approvals and drafts cannot be applied to the shell or the next Agent. A closed
+panel disappears; a temporary terminal-inventory failure retains the last list
+and marks it stale until a successful refresh.

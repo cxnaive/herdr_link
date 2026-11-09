@@ -78,7 +78,12 @@ func inventoryBarrierFixture(t *testing.T, ctx context.Context, agentRows ...jso
 					}
 				case "workspace.list":
 					result = map[string]any{"type": "workspace_list", "workspaces": []any{workspace}}
-				case "pane.list", "tab.list":
+				case "pane.list":
+					result = map[string]any{"type": "pane_list", "panes": []any{pane}}
+					if len(agentRows) > 1 {
+						result = json.RawMessage(`{"type":"pane_list","panes":` + string(agentRows[1]) + `}`)
+					}
+				case "tab.list":
 					_ = json.NewEncoder(conn).Encode(map[string]any{"id": request.ID, "error": map[string]any{"code": "unsupported", "message": "fixture"}})
 					return
 				case "events.subscribe":

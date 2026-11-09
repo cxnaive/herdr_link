@@ -65,6 +65,9 @@ func (a *application) selectAgent(m *machine, agent relay.Agent) {
 	a.imagePreview = nil
 	a.selectedMachine = m.config.ID
 	a.selectedAgent = agent.PaneID
+	if agent.TerminalOnly {
+		a.mode = 1
+	}
 	a.pairing = false
 	if _, chat := a.selected(); chat != nil && !chat.historyBookmark.Paused && a.mode == 0 {
 		a.loadHistory(false)
@@ -291,6 +294,9 @@ func (a *application) event(m *machine, event relay.Message) {
 			m.termState = "终端身份已变化，请重新连接"
 		}
 		a.applyTerminalBackgrounds(m)
+		if selected, chat := a.selected(); selected == m && chat != nil && chat.agent.TerminalOnly {
+			a.setMode(1)
+		}
 		if a.selectedMachine == "" && len(m.agents) > 0 {
 			a.selectAgent(m, m.agents[0])
 		}

@@ -11,6 +11,9 @@ project follows [Semantic Versioning](https://semver.org/).
 ### Changed
 - Consolidate Relay, Gateway, Android and desktop into Herdr Link with one semantic project version and one release download page. Preserve existing Android signing identity and all application/service data paths.
 
+### Fixed
+- Keep retained Herdr terminal panels accessible after an Agent exits. List them as terminals without reusing the exited Agent's conversation identity; Android and desktop open them in terminal mode.
+
 ## [0.3.1] - 2026-11-09
 
 ### Added

@@ -11,6 +11,24 @@
 
 Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端隔离配对测试、桌面 GTK / PDF / 钥匙环测试，并校验 ELF 架构、终端库散列和 Debian 架构字段。统一 Release 缺少任何一个架构的产物都会失败。
 
+## 下载日常构建（不创建 Release）
+
+小更新直接 commit / push 即可，默认只做检查和按组件构建。**不会创建标签、GitHub Release、更新正式版下载链接或自动部署**；需要正式发布新版本时，再执行后面的准备版本和发布步骤。
+
+登录 GitHub，进入 [Actions](https://github.com/cxnaive/herdr_link/actions)，选择对应提交的成功运行，在页面底部 **Artifacts** 下载并解压：
+
+| 组件 | Workflow | 下载附件 |
+| --- | --- | --- |
+| Relay / Gateway · Linux x86_64 | `build-artifacts` | `native-bundles-linux_amd64` |
+| Relay / Gateway · Linux ARM64 | `build-artifacts` | `native-bundles-linux_arm64` |
+| Android | `build-artifacts` | **`android-apks-signed`**，按手机 ABI 选择 APK |
+| Windows x86_64 | `desktop-windows` | `herdr-desktop-windows-amd64-<运行编号>` |
+| Linux x86_64 / ARM64 | `desktop-linux` | `herdr-desktop-linux-<amd64 或 arm64>-<运行编号>` |
+
+Android 必须等签名任务成功，使用 `android-apks-signed`，不要拿中间产物 `android-apks-ci` 覆盖现有安装。包里的 “Release APK” 是 Android 构建类型，不表示创建了 GitHub Release。固定签名、应用 ID 和现有配对保持不变。
+
+日常构建可能沿用当前版本号，区分代码时请核对提交 SHA、运行编号及 `BUILD-INFO.json`，不要只看包名。常规 Relay / Android 附件保留 **1 天**，桌面附件保留 **7 天**；过期后需重新运行构建。它们是用于试用的临时下载，不替代长期保留的正式 Release。多个 workflow 下载时，应选择同一个提交的产物。
+
 ## 准备版本
 
 1. `VERSION.json` 中 `project.version` 和四个组件版本统一为 `MAJOR.MINOR.PATCH`，并更新 `desktop/mygo.json`、Android `versionName`。

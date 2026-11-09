@@ -153,7 +153,6 @@ func (p *Poller) poll(ctx context.Context) {
 		p.logger.Warn("workspace inventory poll failed", "error", err)
 		return
 	}
-	p.resetPollFailures()
 
 	tabs, tabErr := p.client.TabList(ctx)
 	if tabErr != nil {
@@ -161,10 +160,18 @@ func (p *Poller) poll(ctx context.Context) {
 	}
 	topologyPanes, paneErr := p.client.PaneList(ctx)
 	if paneErr != nil {
-		topologyPanes = inv.Panes
+		if ctx.Err() != nil {
+			return
+		}
+		p.recordPollFailure()
+		p.state.MarkInventoryFailure(paneErr)
+		p.notifyInventoryChange()
+		p.logger.Warn("terminal inventory poll failed", "error", paneErr)
+		return
 	}
+	p.resetPollFailures()
 	hydrateWorkspaceCwds(workspaces, tabs, topologyPanes)
-	agents := p.agentsFromTopology(inv.Panes, tabs)
+	agents := p.agentsFromTopology(terminalInventory(inv.Panes, topologyPanes), tabs)
 
 	if p.enrich != nil {
 		p.enrich(ctx, agents)
@@ -180,6 +187,30 @@ func (p *Poller) poll(ctx context.Context) {
 	p.topologyRetries = 0
 	p.notifyInventoryChange()
 	p.logger.Debug("inventory committed", "agents", len(agents), "topology", p.state.TopologyGeneration())
+}
+
+// Agent inventory owns live conversation identity; pane topology owns terminal
+// availability. A retained shell must not inherit a departed agent's session.
+func terminalInventory(agents, panes []herdr.Pane) []herdr.Pane {
+	result := append([]herdr.Pane(nil), agents...)
+	seen := make(map[string]bool, len(agents))
+	for _, agent := range agents {
+		seen[agent.ID] = true
+	}
+	for _, pane := range panes {
+		if pane.ID == "" || pane.TerminalID == "" || seen[pane.ID] {
+			continue
+		}
+		seen[pane.ID] = true
+		pane.TerminalOnly = true
+		pane.Agent = ""
+		pane.Session = ""
+		pane.SessionRaw = herdr.AgentSession{}
+		pane.StateChangeSeq = 0
+		pane.Status = "idle"
+		result = append(result, pane)
+	}
+	return result
 }
 
 func (p *Poller) agentsFromTopology(panes []herdr.Pane, tabs []herdr.Tab) []*AgentState {
@@ -211,6 +242,7 @@ func (p *Poller) agentsFromTopology(panes []herdr.Pane, tabs []herdr.Tab) []*Age
 			project = filepath.Base(pane.Cwd)
 		}
 		agents = append(agents, &AgentState{
+			TerminalOnly:    pane.TerminalOnly,
 			PaneID:          pane.ID,
 			RawPaneID:       pane.ID,
 			TerminalID:      pane.TerminalID,
@@ -352,7 +384,7 @@ func (p *Poller) commitEventTopology(ctx context.Context, topology herdr.Topolog
 		p.Wake()
 		return
 	}
-	agents := p.agentsFromTopology(inventory.Panes, topology.Tabs)
+	agents := p.agentsFromTopology(terminalInventory(inventory.Panes, topology.Panes), topology.Tabs)
 	if p.enrich != nil {
 		p.enrich(ctx, agents)
 	}
