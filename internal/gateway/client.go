@@ -101,7 +101,7 @@ func (s *Server) serveConnect(ctx context.Context, conn nativeconn.MessageConn, 
 	}
 
 	link := s.lookupRelay(hello.RelayID)
-	if link == nil {
+	if link == nil || s.opts.Access != nil && !s.opts.Access.Admitted(hello.RelayID, link.authEpoch) {
 		reject(ctx, conn, gatewaywire.CodeUnknownRelay, "no relay is registered under that id")
 		return
 	}

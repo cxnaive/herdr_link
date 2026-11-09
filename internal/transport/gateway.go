@@ -717,7 +717,7 @@ func (c *GatewayClient) registerLink(parent context.Context, conn nativeconn.Mes
 			return fmt.Errorf("decode gateway error: %w", err)
 		}
 		if rejection.Code == gatewaywire.CodeUnauthorized {
-			rejection.Message = "registration token missing or wrong: set HERDR_GATEWAY_REGISTRATION_TOKEN to match the gateway; also check the gateway's HERDR_GATEWAY_ALLOWED_RELAY_IDS"
+			rejection.Message = "computer registration rejected: check disabled/revoked status in Gateway management and use gateway-join to re-enroll if needed; legacy installations must check HERDR_GATEWAY_REGISTRATION_TOKEN and HERDR_GATEWAY_ALLOWED_RELAY_IDS; do not replace the Relay master key"
 		}
 		return &gatewayRejectedError{code: rejection.Code, message: rejection.Message}
 	default:

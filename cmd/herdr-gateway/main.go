@@ -7,11 +7,15 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -19,6 +23,7 @@ import (
 	"unicode"
 
 	"github.com/0cv/herdr-mobile-relay/internal/gateway"
+	"github.com/0cv/herdr-mobile-relay/internal/gatewayaccess"
 	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
 )
 
@@ -32,10 +37,37 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := gatewayCommand(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func gatewayCommand(args []string, out io.Writer) error {
+	if len(args) == 0 {
+		return run()
+	}
+	if args[0] != "admin-init" && args[0] != "admin-reset" {
+		return errors.New("usage: herdr-gateway [admin-init|admin-reset --state-dir PRIVATE_DIRECTORY]")
+	}
+	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	dir := flags.String("state-dir", "", "private management directory")
+	if flags.Parse(args[1:]) != nil || *dir == "" || flags.NArg() != 0 {
+		return errors.New("usage: herdr-gateway admin-init --state-dir PRIVATE_DIRECTORY")
+	}
+	var password string
+	var err error
+	if args[0] == "admin-reset" {
+		password, err = gatewayaccess.ResetAdmin(*dir)
+	} else {
+		password, err = gatewayaccess.Init(*dir)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(out, "Gateway management initialized. Store this administrator key securely; it is shown only once:\n%s\n", password)
+	return err
 }
 
 func run() error {
@@ -54,6 +86,19 @@ func run() error {
 	opts.Logger = logger
 	opts.TCPAddr = os.Getenv("HERDR_GATEWAY_TCP_ADDR")
 
+	if state := os.Getenv("HERDR_GATEWAY_ADMIN_STATE"); state != "" {
+		store, e := gatewayaccess.Open(state)
+		if e != nil {
+			return e
+		}
+		defer store.Close()
+		opts.Access = store
+		if opts.StatePath == "" {
+			opts.StatePath = filepath.Join(state, "traffic.json")
+		}
+	} else if os.Getenv("HERDR_GATEWAY_ADMIN_ADDR") != "" {
+		return errors.New("initialize and set HERDR_GATEWAY_ADMIN_STATE before enabling the admin listener")
+	}
 	srv, err := gateway.New(opts)
 	if err != nil {
 		return err
@@ -72,10 +117,38 @@ func run() error {
 		IdleTimeout:       2 * time.Minute,
 	}
 
+	var adminServer *http.Server
+	var adminListener net.Listener
+	if opts.Access != nil {
+		adminAddr := envString("HERDR_GATEWAY_ADMIN_ADDR", "127.0.0.1:18378")
+		host, _, e := net.SplitHostPort(adminAddr)
+		if e != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
+			srv.Close()
+			return errors.New("admin listener must bind a literal loopback address; use an HTTPS reverse proxy for remote access")
+		}
+		origin := envString("HERDR_GATEWAY_ADMIN_ORIGIN", "http://"+adminAddr)
+		handler, e := gateway.NewAdminHandler(srv, origin, os.Getenv("HERDR_GATEWAY_PUBLIC_ENDPOINT"))
+		if e != nil {
+			srv.Close()
+			return e
+		}
+		adminListener, e = net.Listen("tcp", adminAddr)
+		if e != nil {
+			srv.Close()
+			return e
+		}
+		adminServer = &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: time.Minute}
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	serveErr := make(chan error, 1)
+	serveErr := make(chan error, 2)
+	if adminServer != nil {
+		go func() {
+			logger.Info("gateway admin listening", "addr", adminListener.Addr().String())
+			serveErr <- adminServer.Serve(adminListener)
+		}()
+	}
 	go func() {
 		logger.Info("gateway listening", "addr", addr)
 		serveErr <- httpServer.ListenAndServe()
@@ -85,6 +158,10 @@ func run() error {
 	case err := <-serveErr:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			_ = srv.Close()
+			_ = httpServer.Close()
+			if adminServer != nil {
+				_ = adminServer.Close()
+			}
 			return fmt.Errorf("gateway: listen on %s: %w", addr, err)
 		}
 	case <-ctx.Done():
@@ -97,6 +174,12 @@ func run() error {
 
 	drainCtx, cancel := context.WithTimeout(context.Background(), drainTimeout)
 	defer cancel()
+	if adminServer != nil {
+		if err := adminServer.Shutdown(drainCtx); err != nil {
+			adminServer.Close()
+			return err
+		}
+	}
 	if err := httpServer.Shutdown(drainCtx); err != nil {
 		return fmt.Errorf("gateway: shutdown: %w", err)
 	}

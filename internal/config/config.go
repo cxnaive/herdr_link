@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0cv/herdr-mobile-relay/internal/gatewayenroll"
 	"github.com/0cv/herdr-mobile-relay/internal/nativeconn"
 )
 
@@ -137,6 +138,18 @@ func Load() (*Config, error) {
 		cfg.HerdrBin = findHerdrBin()
 	}
 
+	access, accessErr := gatewayenroll.LoadLocal(cfg.RuntimeDir)
+	if accessErr == nil {
+		if cfg.Token != "" && cfg.Token != access.RelayKey {
+			return nil, errors.New("saved Gateway enrollment belongs to a different Relay identity")
+		}
+		cfg.Token = access.RelayKey
+		cfg.GatewayRegistrationToken = access.RegistrationToken
+		cfg.GatewayURLs = []string{access.Endpoint}
+		cfg.GatewayURL = access.Endpoint
+	} else if !os.IsNotExist(accessErr) {
+		return nil, accessErr
+	}
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
@@ -341,4 +354,10 @@ func envFloatOr(key string, fallback float64) float64 {
 		}
 	}
 	return fallback
+}
+
+// RuntimeDirectory is shared by serve and gateway-join without loading mutable
+// settings or requiring a working legacy Gateway registration configuration.
+func RuntimeDirectory() string {
+	return resolveRuntimeDir(envOr("XDG_CONFIG_HOME", filepath.Join(homeDir(), ".config")))
 }

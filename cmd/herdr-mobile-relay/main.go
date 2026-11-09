@@ -47,6 +47,8 @@ func run(args []string) (int, error) {
 		command, args = args[0], args[1:]
 	}
 	switch command {
+	case "gateway-join":
+		return runGatewayJoin(args, os.Stdin, os.Stdout)
 	case "serve":
 		if len(args) != 0 {
 			return 2, errors.New("serve does not accept arguments")

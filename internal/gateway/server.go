@@ -28,6 +28,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/0cv/herdr-mobile-relay/internal/gatewayaccess"
 	"github.com/0cv/herdr-mobile-relay/internal/gatewaywire"
 	"github.com/0cv/herdr-mobile-relay/internal/nativeconn"
 )
@@ -93,6 +94,8 @@ const (
 // Options configures a Server. Every limit follows the same convention: a zero
 // value selects the documented default, and a negative value removes the limit.
 type Options struct {
+	// Access enables the private computer registry; caller owns its lifetime.
+	Access *gatewayaccess.Store
 	// TCPAddr enables the opt-in native encrypted-payload TCP transport.
 	TCPAddr string
 	// RegistrationToken optionally requires relays to prove knowledge of this
@@ -163,11 +166,12 @@ type Options struct {
 // Server is the blind gateway. It is safe for concurrent use and serves every
 // route from a single http.Handler.
 type Server struct {
-	opts    Options
-	logger  *slog.Logger
-	now     func() time.Time
-	started time.Time
-	mux     *http.ServeMux
+	adminOperations sync.Mutex
+	opts            Options
+	logger          *slog.Logger
+	now             func() time.Time
+	started         time.Time
+	mux             *http.ServeMux
 
 	connectLimiter *rateLimiter
 	probeLimiter   *rateLimiter
@@ -233,6 +237,11 @@ func New(opts Options) (*Server, error) {
 		opts.Now = time.Now
 	}
 
+	if opts.Access != nil {
+		if err := opts.Access.ImportLegacy(opts.AllowedRelayIDs, opts.Now()); err != nil {
+			return nil, err
+		}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		opts:           opts,
@@ -252,6 +261,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 
+	s.quota.trackUnlimited = opts.Access != nil
 	s.mux.HandleFunc("GET /relay", s.handleRelay)
 	s.mux.HandleFunc("GET /connect", s.handleConnect)
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
@@ -401,7 +411,7 @@ func (s *Server) counts() (relays, clients int) {
 // whether the connection may proceed. The slot is held until releaseClients
 // gives it back, so a caller that fails afterwards must return it.
 func (s *Server) reserveClient() bool {
-	limit := int64(s.opts.MaxClients)
+	limit := int64(s.limits().MaxClients)
 	if limit < 0 {
 		s.clients.Add(1)
 		return true

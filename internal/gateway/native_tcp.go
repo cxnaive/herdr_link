@@ -2,7 +2,11 @@ package gateway
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"errors"
+	"github.com/0cv/herdr-mobile-relay/internal/gatewayenroll"
+	"io"
 	"net"
 	"time"
 
@@ -10,7 +14,7 @@ import (
 )
 
 func (s *Server) startTCP(address string) error {
-	if len(s.opts.RegistrationToken) < 32 {
+	if len(s.opts.RegistrationToken) < 32 && s.opts.Access == nil {
 		return errors.New("native TCP requires a registration token of at least 32 bytes")
 	}
 	listener, err := net.Listen("tcp", address)
@@ -63,6 +67,10 @@ func (s *Server) startTCP(address string) error {
 					}
 				case nativeconn.RolePhone:
 					s.serveConnect(s.ctx, tcp, ip)
+				case nativeconn.RoleEnroll:
+					if s.opts.Access != nil {
+						s.serveEnrollment(s.ctx, conn)
+					}
 				case nativeconn.RoleProbe:
 					ctx, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 					defer cancel()
@@ -80,4 +88,34 @@ func (s *Server) TCPAddress() string {
 		return ""
 	}
 	return s.tcpListener.Addr().String()
+}
+
+// TLS is used only for credential enrollment. Normal opaque relay traffic keeps
+// its existing end-to-end encryption and native record protocol.
+func (s *Server) serveEnrollment(parent context.Context, conn net.Conn) {
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+	defer cancel()
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	secure := tls.Server(conn, &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{s.opts.Access.Certificate()}})
+	defer secure.Close()
+	if secure.HandshakeContext(ctx) != nil {
+		return
+	}
+	var request gatewayenroll.Request
+	decoder := json.NewDecoder(io.LimitReader(secure, 8192))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&request) != nil {
+		return
+	}
+	s.adminOperations.Lock()
+	token, err := s.opts.Access.Redeem(request.ID, request.Secret, request.RelayID, request.RequestID, s.now())
+	if err == nil {
+		s.disconnectStale(request.RelayID)
+	}
+	s.adminOperations.Unlock()
+	response := gatewayenroll.Response{Token: token}
+	if err != nil {
+		response = gatewayenroll.Response{Error: "enrollment denied"}
+	}
+	_ = json.NewEncoder(secure).Encode(response)
 }

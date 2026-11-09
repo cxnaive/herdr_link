@@ -14,6 +14,8 @@ project follows [Semantic Versioning](https://semver.org/).
 - Codex associated-history and manual-pin overrides, terminal status-line identity parsing and automatic `/status` probing.
 
 ### Added
+- Manage Gateway computers from a private web console: view connections and traffic, name computers, issue expiring enrollment codes, disable or revoke access, and adjust connection limits. Existing allow-listed computers keep their pairing.
+- Enroll a Relay with `gateway-join` using a certificate-pinned encrypted exchange and separate per-computer registration credentials, without changing its identity or existing phone pairings.
 - Linux desktop can discover a same-user running native TCP Relay, enroll through its private pairing socket and connect over authenticated loopback without a Gateway round trip. Keep existing computer identities and roles, and reuse credentials after Relay restarts.
 - Linux x86_64 desktop packages share the Windows client's native interface, terminal, conversation and file tools. Install through a Debian package or a user-local archive; credentials stay in the Linux system keyring rather than plaintext.
 - Save independent desktop application and terminal appearance preferences, with soft light/dark palettes and a dark terminal by default. Improve low-contrast terminal text against its actual background, including explicit remote colors, without reconnecting or changing remote configuration.

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Herdr Gateway · 管理</title><link rel="stylesheet" href="/admin.css"><script src="/admin.js" defer></script></head>
+<body><header><div><span class="logo">H</span><strong>Herdr Gateway</strong><span class="muted">管理控制台</span></div><button id="logout" hidden>退出登录</button></header>
+<main><p id="error" role="alert" hidden></p>
+<section id="login"><h1>登录 Gateway</h1><p>使用初始化时生成的管理员密钥。它与电脑接入凭据、手机配对密钥相互独立。</p><form id="login-form"><label>管理员密钥<input id="password" type="password" autocomplete="current-password" required maxlength="128"></label><button type="submit">登录</button></form></section>
+<div id="dashboard" hidden><div class="heading"><div><h1>连接的电脑</h1><p class="muted">管理电脑接入，不读取对话、文件或终端内容。</p></div><button id="refresh">刷新</button></div>
+<div id="summary" class="summary"></div>
+<section><h2>添加电脑</h2><form id="invite-form" class="row"><label>电脑名称<input id="computer-name" required maxlength="48" placeholder="例如：开发工作站"></label><button type="submit">生成接入码</button></form><p class="muted">接入码 10 分钟有效，仅绑定一台电脑。手机／桌面客户端仍需独立配对。</p></section>
+<section id="new-code" hidden><h2>在目标电脑接入</h2><p>在目标电脑运行 <code>herdr-mobile-relay gateway-join</code>，按提示粘贴接入码。已有安装请使用其 <code>run.sh gateway-join</code>，以保留同一份配置与身份。完成后只需重启 Relay，不要重启 Agent。</p><label>接入码（仅本次显示，请勿公开）<textarea id="code" readonly rows="4" spellcheck="false"></textarea></label><button id="close-code">清除接入码</button></section>
+<section class="table-wrap"><table><thead><tr><th>电脑</th><th>状态</th><th>连接</th><th>本月转发流量</th><th>最近连接／断开</th><th>操作</th></tr></thead><tbody id="computers"></tbody></table><p id="empty" class="muted" hidden>还没有电脑。生成接入码后，在运行 Relay 的电脑上完成接入。</p></section>
+<section><h2>待接入</h2><div id="invites"></div></section>
+<section><h2>容量限制</h2><form id="limits-form" class="row"><label>在线电脑上限<input id="max-relays" type="number" min="1" max="4096" required></label><label>总客户端连接上限<input id="max-clients" type="number" min="1" max="4096" required></label><label>每台电脑连接上限<input id="max-per-relay" type="number" min="1" max="256" required></label><button type="submit">保存</button></form><p class="muted">修改限制影响新连接，不强制踢掉已经在线的客户端。流量只计算经 Gateway 转发的字节。</p></section>
+<section><h2>管理记录</h2><ol id="audit"></ol></section><footer id="build" class="muted"></footer></div></main></body></html>

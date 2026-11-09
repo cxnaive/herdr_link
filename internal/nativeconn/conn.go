@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	Magic          = "HRDRTCP1"
-	RoleRelay byte = 1
-	RolePhone byte = 2
-	RoleProbe byte = 3
-	MaxRecord      = (1 << 20) + 6
+	Magic           = "HRDRTCP1"
+	RoleRelay  byte = 1
+	RolePhone  byte = 2
+	RoleProbe  byte = 3
+	RoleEnroll byte = 4 // Pinned TLS enrollment; not a Relay or phone transport.
+	MaxRecord       = (1 << 20) + 6
 )
 
 var ErrProtocol = errors.New("native TCP record protocol violation")
@@ -75,7 +76,7 @@ func Dial(ctx context.Context, raw string, role byte) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	if role < RoleRelay || role > RoleProbe {
+	if role < RoleRelay || role > RoleEnroll {
 		return nil, ErrProtocol
 	}
 	n, err := (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext(ctx, "tcp", address)
@@ -108,7 +109,7 @@ func Accept(ctx context.Context, n net.Conn) (*Conn, byte, error) {
 	_ = n.SetReadDeadline(time.Now().Add(10 * time.Second))
 	var preface [9]byte
 	_, err := io.ReadFull(n, preface[:])
-	if err != nil || string(preface[:8]) != Magic || preface[8] < RoleRelay || preface[8] > RoleProbe {
+	if err != nil || string(preface[:8]) != Magic || preface[8] < RoleRelay || preface[8] > RoleEnroll {
 		_ = c.CloseNow()
 		return nil, 0, ErrProtocol
 	}

@@ -43,9 +43,10 @@ type quotaStore struct {
 	warnBytes   uint64
 	logger      *slog.Logger
 
-	mu     sync.Mutex
-	relays map[string]*counter
-	dirty  bool
+	mu             sync.Mutex
+	relays         map[string]*counter
+	dirty          bool
+	trackUnlimited bool
 }
 
 func newQuotaStore(path string, limit int64, warnPercent int, logger *slog.Logger) *quotaStore {
@@ -73,7 +74,7 @@ func (q *quotaStore) enabled() bool { return q.limit >= 0 }
 // add charges relayed bytes against a relay and returns the advisory notices the
 // relay should receive now. Each notice is sent at most once per relay per month.
 func (q *quotaStore) add(relayID string, n uint64, now time.Time) []gatewaywire.NoticePayload {
-	if !q.enabled() || n == 0 {
+	if (!q.enabled() && !q.trackUnlimited) || n == 0 {
 		return nil
 	}
 	q.mu.Lock()
@@ -82,6 +83,9 @@ func (q *quotaStore) add(relayID string, n uint64, now time.Time) []gatewaywire.
 	entry := q.counterLocked(relayID, now)
 	entry.RelayedBytes += n
 	q.dirty = true
+	if !q.enabled() {
+		return nil
+	}
 
 	var notices []gatewaywire.NoticePayload
 	if !entry.WarnSent && q.warnBytes > 0 && entry.RelayedBytes >= q.warnBytes {

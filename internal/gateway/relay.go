@@ -30,12 +30,14 @@ var errLinkClosed = errors.New("gateway: relay link is closed")
 // relayLink is one registered computer relay: a multiplexed WebSocket carrying
 // every phone connection paired with that relay id.
 type relayLink struct {
-	server  *Server
-	relayID string
-	conn    nativeconn.MessageConn
-	logger  *slog.Logger
-	ctx     context.Context
-	cancel  context.CancelFunc
+	authEpoch   uint64
+	connectedAt time.Time
+	server      *Server
+	relayID     string
+	conn        nativeconn.MessageConn
+	logger      *slog.Logger
+	ctx         context.Context
+	cancel      context.CancelFunc
 
 	// unansweredPings counts pings sent since the last pong.
 	unansweredPings atomic.Int64
@@ -75,18 +77,25 @@ func (s *Server) serveRelay(ctx context.Context, conn nativeconn.MessageConn) {
 	defer conn.CloseNow()
 	conn.SetReadLimit(gatewaywire.MaxHelloBytes)
 
-	relayID, ok := s.relayHello(ctx, conn)
+	relayID, epoch, ok := s.relayHello(ctx, conn)
 	if !ok {
 		return
 	}
 
 	conn.SetReadLimit(gatewaywire.HeaderSize + gatewaywire.MaxFramePayload)
-	link, refusal := s.registerRelay(ctx, relayID, conn)
+	link, refusal := s.registerRelay(ctx, relayID, conn, epoch)
 	if link == nil {
 		s.logger.Warn("relay registration refused",
 			"relay", shortID(relayID), "code", refusal)
 		reject(ctx, conn, refusal, refusalMessage(refusal))
 		return
+	}
+	if s.opts.Access != nil {
+		if err := s.opts.Access.Connected(relayID, epoch, s.now()); err != nil {
+			s.unregisterRelay(link)
+			link.close(websocket.StatusPolicyViolation, "access_changed")
+			return
+		}
 	}
 	if err := writeJSON(ctx, conn, gatewaywire.ReadyMessage{
 		Type:  gatewaywire.TypeReady,
@@ -103,12 +112,12 @@ func (s *Server) serveRelay(ctx context.Context, conn nativeconn.MessageConn) {
 }
 
 // relayHello performs the challenge exchange and optional registration checks.
-func (s *Server) relayHello(ctx context.Context, conn nativeconn.MessageConn) (string, bool) {
+func (s *Server) relayHello(ctx context.Context, conn nativeconn.MessageConn) (string, uint64, bool) {
 	nonce, err := randomNonce()
 	if err != nil {
 		s.logger.Error("nonce generation failed", "error", err)
 		reject(ctx, conn, gatewaywire.CodeInternal, "gateway could not generate a challenge")
-		return "", false
+		return "", 0, false
 	}
 	if err := writeJSON(ctx, conn, gatewaywire.ServerHello{
 		Type:     gatewaywire.TypeServerHello,
@@ -119,30 +128,39 @@ func (s *Server) relayHello(ctx context.Context, conn nativeconn.MessageConn) (s
 		Revision: s.opts.Revision,
 	}); err != nil {
 		s.logger.Debug("relay hello write failed", "error", err)
-		return "", false
+		return "", 0, false
 	}
 
 	data, err := readHello(ctx, conn, helloTimeout)
 	if err != nil {
 		s.logger.Debug("relay hello read failed", "error", err)
 		reject(ctx, conn, gatewaywire.CodeBadHello, "register hello was not received")
-		return "", false
+		return "", 0, false
 	}
 	var hello gatewaywire.RegisterHello
 	if err := json.Unmarshal(data, &hello); err != nil || hello.Type != gatewaywire.TypeRegister {
 		reject(ctx, conn, gatewaywire.CodeBadHello, "register hello is malformed")
-		return "", false
+		return "", 0, false
 	}
 	if hello.Proto != gatewaywire.Proto {
 		reject(ctx, conn, gatewaywire.CodeBadHello, "unsupported gateway protocol version")
-		return "", false
+		return "", 0, false
 	}
 	if !gatewaywire.ValidRelayID(hello.RelayID) {
 		reject(ctx, conn, gatewaywire.CodeBadHello, "relay id is malformed")
-		return "", false
+		return "", 0, false
 	}
+	epoch := uint64(0)
 	allowed := len(s.opts.AllowedRelayIDs) == 0 || s.opts.AllowedRelayIDs[hello.RelayID]
-	if s.opts.RegistrationToken != "" {
+	if s.opts.Access != nil {
+		challenge, nonceErr := base64.RawURLEncoding.DecodeString(nonce)
+		proof, proofErr := base64.RawURLEncoding.DecodeString(hello.RegistrationProof)
+		if nonceErr != nil || proofErr != nil {
+			allowed = false
+		} else {
+			epoch, allowed = s.opts.Access.Verify(hello.RelayID, s.opts.RegistrationToken, challenge, proof)
+		}
+	} else if s.opts.RegistrationToken != "" {
 		challenge, nonceErr := base64.RawURLEncoding.DecodeString(nonce)
 		proof, proofErr := base64.RawURLEncoding.DecodeString(hello.RegistrationProof)
 		allowed = allowed && nonceErr == nil && proofErr == nil &&
@@ -151,9 +169,9 @@ func (s *Server) relayHello(ctx context.Context, conn nativeconn.MessageConn) (s
 	if !allowed {
 		s.logger.Warn("relay registration unauthorized", "relay", shortID(hello.RelayID))
 		reject(ctx, conn, gatewaywire.CodeUnauthorized, "relay registration is not authorized")
-		return "", false
+		return "", 0, false
 	}
-	return hello.RelayID, true
+	return hello.RelayID, epoch, true
 }
 
 // registerRelay installs a registration, replacing any earlier link for the
@@ -164,10 +182,15 @@ func (s *Server) relayHello(ctx context.Context, conn nativeconn.MessageConn) (s
 // Only a genuinely new id can hit that ceiling: replacing an id that is already
 // in the table does not grow it, and refusing a reconnect would strand a relay
 // that is merely re-establishing its own link.
-func (s *Server) registerRelay(parent context.Context, relayID string, conn nativeconn.MessageConn) (*relayLink, string) {
+func (s *Server) registerRelay(parent context.Context, relayID string, conn nativeconn.MessageConn, epochs ...uint64) (*relayLink, string) {
+	epoch := uint64(0)
+	if len(epochs) > 0 {
+		epoch = epochs[0]
+	}
 	ctx, cancel := context.WithCancel(parent)
 	link := &relayLink{
 		server:    s,
+		authEpoch: epoch, connectedAt: s.now(),
 		relayID:   relayID,
 		conn:      conn,
 		logger:    s.logger,
@@ -178,8 +201,13 @@ func (s *Server) registerRelay(parent context.Context, relayID string, conn nati
 	}
 
 	s.mu.Lock()
+	if s.stopped() || s.opts.Access != nil && !s.opts.Access.Admitted(relayID, epoch) {
+		s.mu.Unlock()
+		cancel()
+		return nil, gatewaywire.CodeUnauthorized
+	}
 	previous := s.relays[relayID]
-	if previous == nil && s.opts.MaxRelays >= 0 && len(s.relays) >= s.opts.MaxRelays {
+	if previous == nil && s.limits().MaxRelays >= 0 && len(s.relays) >= s.limits().MaxRelays {
 		s.mu.Unlock()
 		cancel()
 		return nil, gatewaywire.CodeAtCapacity
@@ -205,6 +233,11 @@ func (s *Server) registerRelay(parent context.Context, relayID string, conn nati
 	}
 
 	s.mu.Lock()
+	if s.stopped() || s.opts.Access != nil && !s.opts.Access.Admitted(relayID, epoch) {
+		s.mu.Unlock()
+		cancel()
+		return nil, gatewaywire.CodeUnauthorized
+	}
 	// The table may have moved while the probe ran: another registration could
 	// have displaced the incumbent, or it could have unregistered itself. Only
 	// replace what we actually probed, and never grow past the ceiling.
@@ -215,7 +248,7 @@ func (s *Server) registerRelay(parent context.Context, relayID string, conn nati
 		cancel()
 		return nil, gatewaywire.CodeRelayBusy
 	}
-	if current == nil && s.opts.MaxRelays >= 0 && len(s.relays) >= s.opts.MaxRelays {
+	if current == nil && s.limits().MaxRelays >= 0 && len(s.relays) >= s.limits().MaxRelays {
 		s.mu.Unlock()
 		cancel()
 		return nil, gatewaywire.CodeAtCapacity
@@ -231,6 +264,9 @@ func (s *Server) registerRelay(parent context.Context, relayID string, conn nati
 
 // refusalMessage renders the human half of a registration refusal.
 func refusalMessage(code string) string {
+	if code == gatewaywire.CodeUnauthorized {
+		return "computer access changed; check gateway management"
+	}
 	if code == gatewaywire.CodeRelayBusy {
 		return "another link for this relay id is still live"
 	}
@@ -258,11 +294,16 @@ func (l *relayLink) alive(parent context.Context) bool {
 // unregisterRelay removes a link only if it is still the live registration, so a
 // replaced link cannot evict its successor while unwinding.
 func (s *Server) unregisterRelay(link *relayLink) {
+	removed := false
 	s.mu.Lock()
 	if s.relays[link.relayID] == link {
 		delete(s.relays, link.relayID)
+		removed = true
 	}
 	s.mu.Unlock()
+	if removed && s.opts.Access != nil {
+		_ = s.opts.Access.Seen(link.relayID, link.authEpoch, s.now())
+	}
 }
 
 // run pumps the link until it fails, then tears down everything it owns.
@@ -407,11 +448,11 @@ func (l *relayLink) attach(client *clientConn) error {
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.closed {
+	if l.closed || l.server.opts.Access != nil && !l.server.opts.Access.Admitted(l.relayID, l.authEpoch) {
 		l.server.releaseClients(1)
 		return errLinkClosed
 	}
-	if limit := l.server.opts.MaxClientsPerRelay; limit >= 0 && len(l.conns) >= limit {
+	if limit := l.server.limits().MaxClientsPerRelay; limit >= 0 && len(l.conns) >= limit {
 		l.server.releaseClients(1)
 		return errTooManyClients
 	}
