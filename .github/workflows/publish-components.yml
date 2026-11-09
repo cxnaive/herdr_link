@@ -24,7 +24,7 @@ jobs:
   verify:
     name: Verify Herdr Link CI release
     if: >-
-      github.repository == 'cxnaive/herder_relay_extra' &&
+      github.repository == 'cxnaive/herdr_link' &&
       github.ref == 'refs/heads/feat/android-file-companion'
     runs-on: ubuntu-24.04
     timeout-minutes: 20

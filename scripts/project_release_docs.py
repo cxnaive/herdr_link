@@ -2,7 +2,7 @@
 import json
 from component_release_docs import replace_block
 
-REPO = 'cxnaive/herder_relay_extra'
+REPO = 'cxnaive/herdr_link'
 
 
 def download_blocks(record):

@@ -350,20 +350,28 @@ export const mobileWorkflowTests: Array<[string, () => Promise<void>]> = [
     const signer = workflow.jobs['android-sign'];
     assert.equal(signer.environment, 'android-signing');
     assert.equal(signer.needs, 'android-apk');
-    for (const repository of ['cxnaive/herder_relay_extra', 'other/fork']) {
-      for (const ref of ['refs/heads/feat/android-file-companion', 'refs/heads/feature', 'refs/tags/android-v0.2.22', 'refs/pull/1/merge']) {
+    for (const repository of ['cxnaive/herdr_link', 'cxnaive/herder_link', 'cxnaive/herder_relay_extra', 'other/fork']) {
+      for (const ref of ['refs/heads/feat/android-file-companion', 'refs/heads/feature', 'refs/tags/v0.3.0', 'refs/tags/android-v0.2.22', 'refs/pull/1/merge']) {
         for (const event_name of ['push', 'workflow_dispatch', 'pull_request', 'pull_request_target']) {
-          const expected = repository === 'cxnaive/herder_relay_extra' && ref === 'refs/heads/feat/android-file-companion' && ['push', 'workflow_dispatch'].includes(event_name);
+          const expected = repository === 'cxnaive/herdr_link' && ref === 'refs/heads/feat/android-file-companion' && ['push', 'workflow_dispatch'].includes(event_name);
           assert.equal(condition(signer.if, { needs: {}, success: true, github: { repository, ref, event_name } }), expected);
         }
       }
     }
     for (const [id, job] of Object.entries(workflow.jobs) as Array<[string, any]>) {
       if (id !== 'android-sign') assert.doesNotMatch(JSON.stringify(job), /secrets\./u);
-      for (const step of job.steps) {
+      if (job.uses) {
+        assert.ok(['desktop-linux-release', 'desktop-windows-release'].includes(id));
+        assert.equal(job.uses, `./.github/workflows/${id.replace('-release', '')}.yml`);
+        assert.equal(job.secrets, undefined);
+        assert.equal(job.if, "github.event_name == 'workflow_dispatch' && inputs.components == 'release'");
+      } else {
+        assert.ok(Array.isArray(job.steps));
+      }
+      for (const step of job.steps || []) {
         if (step.uses && !step.uses.startsWith('./')) assert.match(step.uses, /@[0-9a-f]{40}$/u);
         if (step.uses?.startsWith('actions/upload-artifact@')) {
-          assert.equal(step.with['retention-days'], 1);
+          assert.equal(step.with['retention-days'], id === 'project-release-bundle' ? 7 : 1);
           assert.doesNotMatch(step.with.path, /keystore|runner\.temp|\.gradle/u);
         }
         if (step.env && JSON.stringify(step.env).includes('secrets.')) {

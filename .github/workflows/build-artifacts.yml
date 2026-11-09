@@ -203,7 +203,7 @@ jobs:
     name: Android APKs signed for existing installations
     needs: android-apk
     if: >-
-      github.repository == 'cxnaive/herder_relay_extra' &&
+      github.repository == 'cxnaive/herdr_link' &&
       github.ref == 'refs/heads/feat/android-file-companion' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     environment: android-signing

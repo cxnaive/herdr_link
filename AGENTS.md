@@ -13,6 +13,7 @@ Read `README.md` and `QUICKSTART.md` before changing behavior. `docs/` holds the
 ## Herdr Link releases in this fork
 
 - The actual default branch is `feat/android-file-companion`; use it without creating branches unnecessarily. Upstream `dev` / `main` conventions above do not apply here.
+- The canonical repository is `cxnaive/herdr_link`; release URLs and trusted-workflow guards must use this exact repository.
 - The project is **Herdr Link**, using one numeric semantic version in `VERSION.json` for Relay, Gateway, Android and desktop. Android versionCode must increase and its signing identity must remain unchanged. Preserve existing application IDs, runtime service names, keys and data paths.
 - Routine checks remain component-scoped. Full race/browser/device qualification is manual via `check.yml` with `full=true`.
 - Release builds: manually dispatch `build-artifacts.yml` with `components=release`. It calls the desktop platform workflows and assembles one `herdr-link-release` artifact from the same commit/run. Never use local binaries, re-sign locally or manually upload release assets.

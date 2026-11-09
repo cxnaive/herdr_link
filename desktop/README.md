@@ -7,13 +7,13 @@ Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。�
 <!-- desktop-downloads:start -->
 ## 下载
 
-**[Herdr Link v0.3.0 · Desktop](https://github.com/cxnaive/herder_relay_extra/releases/tag/v0.3.0)**
+**[Herdr Link v0.3.0 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.0)**
 
 | 系统 | 安装方式 |
 | --- | --- |
-| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-desktop-0.3.0-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
-| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
-| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herder_relay_extra/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64-install.sh) |
+| Windows x86_64 | [便携 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-windows-amd64.zip)，解压运行 `Herdr Desktop.exe` |
+| Debian / Ubuntu x86_64 | [Debian 包](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.deb)，使用 `sudo apt install ./文件名.deb` |
+| Linux x86_64 用户安装 | [归档](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64.tar.gz) + [安装脚本](https://github.com/cxnaive/herdr_link/releases/download/v0.3.0/herdr-link-desktop-0.3.0-linux-amd64-install.sh) |
 | macOS | 暂无签名、公证的下载包，使用下方源码构建路径 |
 
 桌面程序目前未签名；Linux 需要 GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service。各端共享项目版本，不表示所有平台已完成同等范围的验证。

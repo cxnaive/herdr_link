@@ -61,7 +61,7 @@ for name in ("DEPLOYMENT.md", "GATEWAY-MANAGEMENT.md"):
     text = guide.read_text()
     text = text.replace("](gateway-management.md", "](GATEWAY-MANAGEMENT.md")
     text = text.replace("](native-deployment.md", "](DEPLOYMENT.md")
-    text = text.replace("](../README.md", "](https://github.com/cxnaive/herder_relay_extra/blob/feat/android-file-companion/README.md")
+    text = text.replace("](../README.md", "](https://github.com/cxnaive/herdr_link/blob/feat/android-file-companion/README.md")
     guide.write_text(text)
 
 PY

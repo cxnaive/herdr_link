@@ -11,7 +11,7 @@ import subprocess
 import tarfile
 import zipfile
 
-REPOSITORY = "cxnaive/herder_relay_extra"
+REPOSITORY = "cxnaive/herdr_link"
 BRANCH = "feat/android-file-companion"
 ARTIFACTS = {"android": "android-apks-signed", "native": "native-bundles-linux_amd64"}
 ABIS = ("arm64-v8a", "armeabi-v7a", "x86_64")

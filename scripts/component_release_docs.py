@@ -2,7 +2,7 @@
 import json
 import re
 
-REPOSITORY = "cxnaive/herder_relay_extra"
+REPOSITORY = "cxnaive/herdr_link"
 
 
 def replace_block(text, key, body):

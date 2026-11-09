@@ -76,6 +76,26 @@ class ProjectReleaseTests(unittest.TestCase):
             P.assemble(self.inputs, self.root / 'out')
         return self.root / 'out'
 
+    def test_repository_rename_keeps_release_and_signing_guards_exact(self):
+        self.assertEqual(P.V.REPOSITORY, 'cxnaive/herdr_link')
+        self.assertEqual(D.REPO, P.V.REPOSITORY)
+        self.assertEqual(json.loads((ROOT / 'VERSION.json').read_text())['repository'], P.V.REPOSITORY)
+        for path in ('.github/workflows/build-artifacts.yml', '.github/workflows/publish-components.yml'):
+            workflow = (ROOT / path).read_text()
+            self.assertIn("github.repository == 'cxnaive/herdr_link'", workflow)
+            self.assertNotIn('cxnaive/herder_relay_extra', workflow)
+        env = {'GITHUB_ACTIONS': 'true', 'GITHUB_REPOSITORY': P.V.REPOSITORY,
+               'GITHUB_REF': 'refs/heads/' + P.V.BRANCH, 'GITHUB_EVENT_NAME': 'workflow_dispatch'}
+        with patch.dict(os.environ, env, clear=True):
+            P.V.runner_guard()
+        for repository in ('cxnaive/herder_link', 'cxnaive/herder_relay_extra', 'other/fork'):
+            with patch.dict(os.environ, {**env, 'GITHUB_REPOSITORY': repository}, clear=True), self.assertRaises(ValueError):
+                P.V.runner_guard()
+        blocks = D.download_blocks({'version': '0.3.0', 'tag': 'v0.3.0'})
+        for text in blocks.values():
+            self.assertIn('https://github.com/cxnaive/herdr_link/releases/', text)
+            self.assertNotIn('herder_relay_extra', text)
+
     def test_one_version_rejects_temporary_suffix_and_component_mismatch(self):
         self.assertEqual(P.project_version(MANIFEST), '0.3.0')
         for field in ['project', 'relay', 'android', 'desktop', 'native_gateway']:
