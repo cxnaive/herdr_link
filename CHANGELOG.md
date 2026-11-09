@@ -5,6 +5,9 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.
+
 ### Changed
 - Consolidate Relay, Gateway, Android and desktop into Herdr Link with one semantic project version and one release download page. Preserve existing Android signing identity and all application/service data paths.
 

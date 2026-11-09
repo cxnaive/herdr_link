@@ -251,7 +251,7 @@ func (a *adminHandler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.server.opts.Access.Login(input.Password) {
-		adminError(w, 401, "管理员密钥无效")
+		adminError(w, 401, "管理员密钥或密码无效")
 		return
 	}
 	token := adminSecret()

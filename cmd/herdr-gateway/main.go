@@ -44,6 +44,10 @@ func main() {
 }
 
 func gatewayCommand(args []string, out io.Writer) error {
+	return gatewayCommandInput(args, os.Stdin, out)
+}
+
+func gatewayCommandInput(args []string, input io.Reader, out io.Writer) error {
 	if len(args) == 0 {
 		return run()
 	}
@@ -53,8 +57,24 @@ func gatewayCommand(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	dir := flags.String("state-dir", "", "private management directory")
+	passwordStdin := flags.Bool("password-stdin", false, "read a custom administrator password from stdin (admin-reset only)")
 	if flags.Parse(args[1:]) != nil || *dir == "" || flags.NArg() != 0 {
 		return errors.New("usage: herdr-gateway admin-init --state-dir PRIVATE_DIRECTORY")
+	}
+	if *passwordStdin {
+		if args[0] != "admin-reset" {
+			return errors.New("--password-stdin requires admin-reset")
+		}
+		data, err := io.ReadAll(io.LimitReader(input, 131))
+		if err != nil {
+			return errors.New("cannot read administrator password")
+		}
+		password := strings.TrimSuffix(strings.TrimSuffix(string(data), "\n"), "\r")
+		if err := gatewayaccess.SetAdminPassword(*dir, password); err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(out, "Administrator password updated. Computer credentials and certificate preserved.")
+		return err
 	}
 	var password string
 	var err error

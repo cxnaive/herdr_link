@@ -165,7 +165,7 @@ func Open(dir string) (*Store, error) {
 		}
 		return json.Unmarshal(b.Get(stateKey), &s.state)
 	})
-	if err == nil && (s.state.Schema != 1 || s.state.Computers == nil || s.state.Invites == nil || len(s.state.Computers) > maxComputers || len(s.state.Invites) > maxInvites || len(s.state.AdminHash) != 64) {
+	if err == nil && (s.state.Schema != 1 || s.state.Computers == nil || s.state.Invites == nil || len(s.state.Computers) > maxComputers || len(s.state.Invites) > maxInvites || !validAdminHash(s.state.AdminHash)) {
 		err = ErrInvalid
 	}
 	if err == nil {
@@ -184,8 +184,9 @@ func (s *Store) Certificate() tls.Certificate { return s.certificate }
 func (s *Store) Fingerprint() string          { return s.fingerprint }
 func (s *Store) Login(password string) bool {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(password) == 43 && equalHash(password, s.state.AdminHash)
+	encoded := s.state.AdminHash
+	s.mu.RUnlock()
+	return verifyAdminPassword(password, encoded)
 }
 func clone(v State) State {
 	b, _ := json.Marshal(v)

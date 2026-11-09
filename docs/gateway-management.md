@@ -144,3 +144,20 @@ sudo systemctl start herdr-tcp-gateway.service
 ```
 
 管理数据库不允许多个 Gateway 同时写入。服务重启后管理员需要重新登录，电脑凭据与设置保持不变。
+
+
+### 设置自定义管理员密码
+
+支持 `admin-reset --password-stdin` 的 Gateway 可用下面的 Bash 命令修改管理页登录密码。旧版本只有随机密钥重置，请先升级 Gateway。密码为 8–128 字节，不包含换行；按提示输入，避免写进命令历史或进程参数。自定义密码以带随机盐的 PBKDF2-SHA256 校验值保存。
+
+```bash
+read -r -s -p '新的管理员密码: ' gateway_password; printf '\n'
+sudo -v
+sudo systemctl stop herdr-tcp-gateway.service
+printf '%s' "$gateway_password" | sudo -u herdr-tcp /opt/herdr-tcp-gateway/current/herdr-gateway admin-reset \
+  --state-dir /var/lib/herdr-tcp-gateway/management --password-stdin
+unset gateway_password
+sudo systemctl start herdr-tcp-gateway.service
+```
+
+重启会使原管理页登录会话失效，Relay 会自动重连。电脑接入凭据、Gateway 证书和客户端配对保持不变。仍可用不带 `--password-stdin` 的 `admin-reset` 恢复为新随机密钥。
