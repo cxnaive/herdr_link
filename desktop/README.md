@@ -1,135 +1,113 @@
 # Herdr Desktop
 
-Windows / Linux / macOS 桌面客户端。Linux 与 Windows 使用同一套应用代码，不是网页套壳或精简版。界面采用 MyGo 原生 Go UI，功能和配对流程参考仓库内的 Kotlin Android 客户端。
+Windows / Linux / macOS 原生桌面客户端，使用同一套应用代码。通过 Relay 连接多台 Herdr 电脑，提供对话、审批、交互终端和工作区文件面板。
 
-## 使用
+当前版本 **0.1.0 开发预览**。系统结构与服务端安装见[项目首页](../README.md)。
 
-1. Windows 打开 `build/windows-amd64/Herdr Desktop.exe`，同目录保留 `ghostty-vt.dll`；Linux 从应用菜单或 `herdr-desktop` 启动，安装方式见下文。
-2. 点击「添加电脑」，粘贴该电脑生成的 `herdr-tcp://` 一次性邀请。邀请有效期以 Relay 为准。
-3. 在左侧选择电脑、项目和 Agent。中间切换「对话」「终端」，右上角「文件」打开当前工作区。
+## Windows
 
-配对信息和草稿加密存储在系统用户配置目录下的 `Herdr Desktop/state.enc`；密钥保存在 Windows Credential Manager / macOS Keychain / Linux Secret Service（如 GNOME Keyring）。请为桌面端单独生成邀请。
+从 [desktop-windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 成功运行的 Artifacts 下载 `herdr-desktop-windows-amd64-<构建编号>`，校验后解压。
 
-## Linux 连接本机 Relay
-
-在「添加电脑」中点击 **查找本机 Relay → 连接本机**。首次启动且还没有配对电脑时会自动查找，但**不会自动创建配对**。多个运行实例分别列出；名称可以在上方填写，留空使用“本机 Relay”。
-
-- 直接复用现有 Relay API：对话、原生终端、状态、文件和管理请求走 `127.0.0.1` / `::1` 上的 **E2EE WebSocket**，不经过远端 Gateway。Gateway 暂时不可达不影响本机连接。
-- 首次点击通过该 Relay 的私有 `tcp-pair/admin.sock` 申请独立设备邀请，再完成正常设备鉴权、加密存储和凭据确认。不是导入手机密钥，不打开 `relay.env`、`devices.json`，也不提取或存储 Relay 的主密钥及注册密钥。
-- Linux 只读检查当前用户的 Relay 进程、必要的启动环境路径/端口，以及 socket 权限和内核 `SO_PEERCRED`。不扫描网络，不连接其他用户的服务，不接受未鉴权的明文 Relay。发现本身不创建邀请。
-- 同一个 Relay 已通过远程方式配对时复用现有电脑身份、名称、草稿和设备角色，只把此客户端的连接切到本机；不会把只读角色升级成控制者。以后重启客户端会继续使用保存的本机连接。
-- Relay 重启后重新确认进程和当前端口，复用设备凭据。socket 被替换成不可信对象、被撤销的凭据或服务不可用时明确失败，不静默改走 Gateway，也不自动重新授权。
-- 当前支持提供私有配对 socket 的 **原生 TCP Relay**（包括现有 codexfix.19），无需更新 Relay。需要同一 Linux 用户、可读取其 `/proc` 元数据，且服务在回环地址可访问。容器中跨 PID/用户空间、以其他用户运行、纯无 token 或未提供私有配对接口的 Relay 不自动连接，仍可使用远程邀请。
-
-普通 TCP 远程配对入口仍然保留。本机直连不是绕过权限：文件范围、控制权、停止/重启 Agent 等都继续由 Relay 的原有授权规则检查。
-
-## 外观
-
-左下角「外观」、菜单「视图 → 外观…」和终端工具栏「终端配色」均可打开设置。应用可选跟随系统、柔和浅色或柔和深色；终端独立选择柔和深色、柔和浅色或跟随应用。默认应用跟随系统，终端使用深灰底。选择立即应用到已连接终端并保存在本机，不需要重新连接。
-
-默认开启「增强终端文字对比度」，使文字与所在单元格背景达到至少 4.5:1 的对比度，改善浅底浅色字及远端深色输入条上的黑字。关闭后保留原始文字颜色。
-
-「柔化浅色终端背景（仅 Codex）」默认开启，将 Codex 浅色终端中的中性深灰背景块显示为柔和浅灰，保留彩色背景、反色高亮和选区。深色终端、Claude、Pi、其他或未知类型 Agent 不应用这项柔化。关闭即可立即恢复原始背景。以上选项只改变本机显示，不修改终端内容、历史或远端配置。
-
-## 当前功能
-
-- 多电脑连接、电脑/项目两级折叠并保存、搜索临时展开、服务端会话名称和断线重连。
-- 可保存的应用/终端独立外观设置，柔和深浅色和终端文字对比度修正。
-- 项目旁新建 Agent，右键或顶部「管理」改名、停止、重启、清空和排序；Codex 模型/思考强度按运行时目录选择，保存后确认有效设置。
-- 新建窗口显示电脑端默认启动参数；Relay 自动给 Codex 附加显示会话 ID/名称的 `-c`，额外参数单独填写，重启不重复附加。
-- Markdown 对话、连续工具调用分组及两级折叠、历史分页、加载动画/进度/取消；增量更新、最近对话加密缓存、搜索、斜杠指令和复制最新回复。
-- 用户消息靠右对齐并随内容收缩，长消息自动换行；对话、工具调用和输入框共用居中的内容区，缩放窗口或打开文件栏时自动适配。
-- 对话内审批和单选/多选问答、自定义答案、上一题及进一步讨论；发送前核对当前事件身份。
-- 「＋ 附件」选择文件或粘贴图片/文件，支持资源管理器/Finder 拖入、分块校验、上传进度和取消。每条消息最多 8 个附件、单个 20 MiB、总计 50 MiB，引用随草稿加密保存。
-- 视频、压缩包、模型权重和其他无法识别的格式按普通文件原样上传，发送消息时交给远端 Agent 读取；上传不要求客户端能够预览。需电脑端 Relay 包含普通文件上传支持，旧版类型白名单会拒绝此类文件。
-- 读取选中 Agent 的运行状态和本轮用时；未提供可靠开始时间时显示用时不可用，断线、状态过期和会话替换后停止推算。
-- 原生终端控件：直接键盘输入、中文、Ctrl-C、选择复制、鼠标和窗口尺寸变化。终端连接当前远端 Agent，不创建替代的本地 Shell。
-- 终端输入按顺序发送，最多允许 32 个待确认操作，不再逐次等待网络往返；任何失败都会关闭连接且不重发。终端输出直接进入原生控件，切换终端时暂停历史抓取，返回对话后恢复。
-- 右侧工作区文件浏览器：目录分页、筛选、隐藏文件切换和路径输入（目录以 `/` 结尾）；文本、Markdown、PDF 和图片预览。支持 Codex 引用、Markdown 相对链接和图片放大。
-- 电脑/项目菜单管理项目和 Git Worktree，电脑本地改名/移除；配对设备列表、角色、改名、撤销和邀请。Agent 菜单可查看 Git diff、会话诊断和活动记录。
-- 应用运行期间接收所有已连接电脑的 Agent 完成/待处理通知；支持单独静音和点击通知进入会话。
-- 原文件下载：系统保存对话框、进度、取消；按 512 KiB 分块校验版本与 SHA-256，临时文件完整后才替换目标。下载不限于预览的 12 MiB 上限，当前不支持断点续传。
-- 文本预览上限 1 MiB，文档接口上限 12 MiB，图片解码上限 2400 万像素。PDF 使用内嵌系统阅读器：Windows 需要 WebView2，macOS 使用 WKWebView；主界面和终端仍是原生控件。
-
-默认只读取选中 Agent 的工作目录。控制者可在电脑菜单「文件访问范围…」或文件面板「访问范围」明确授权当前设备读取工作区外文件；授权保存在 Relay。开启后可返回 `/` 根目录，文件链接、图片预览和下载使用同一范围；关闭会取消进行中的读取/下载并清理预览。只读角色无法扩大访问范围。消息发送与原生终端需要控制者权限，未知投递结果不会自动重发。
-
-长历史会在重连或重新打开会话后自动补齐到上次阅读的位置。点击「加载全部历史」可读到最早消息，显示实际恢复页数和条数；「取消加载」保留已读内容，可继续加载。客户端不再裁掉超过 2,000 条的消息，游标过期时会重新建立连续历史；普通刷新只补最近缺口。加密缓存仍保存最近窗口和阅读边界，更早正文需要 Relay 在线恢复。
-
-Relay 的 `source_truncated` 只表示本页从日志尾部开始读取，不等于源记录缺失，桌面不会据此显示错误。真正缺少续接记录时显示服务端原因，解析失败或省略过大内容时分别提示。
-
-## 原生终端的服务端要求
-
-远端需运行本分支的 Relay，且 Herdr 支持私有终端协议 **22**。Relay 会公布 `desktop_terminal_v1` 能力；旧版 Relay 可继续使用对话和已有文件接口，但终端需要更新。
-
-终端通过 Herdr 的 direct attach 连接持续接收 ANSI 渲染流，键盘、鼠标、滚动和尺寸变化直接送回 Herdr。没有 Android 的截图加独立输入框，也不使用 PTY ioctl 修改 Herdr 之外的尺寸。已有写入控制者时不会强行接管。每台电脑同一连接当前只附加一个终端，断开不会结束 Agent。
-
-## 开发与构建
-
-需要 Go **1.27.3**。依赖精确固定为 MyGo **v0.8.1**，终端库由 MyGo 构建工具下载并验证固定校验值。
-
-## 自动构建
-
-推送到仓库主分支 `feat/android-file-companion` 后，桌面源码或相关 Relay 协议变化会自动运行 [`desktop-windows`](../.github/workflows/desktop-windows.yml)：检查格式、vet、构建 Windows amd64，并运行界面、原生终端、连接及文件下载测试。PR 也会验证；可在 Actions 手动运行。
-
-Linux 的独立构建与依赖见下方章节。
-
-从 **Actions → desktop-windows → 成功的构建 → Artifacts** 下载 `herdr-desktop-windows-amd64-<构建编号>`，内含版本化 ZIP 和 SHA-256。解压后同时保留 `Herdr Desktop.exe` 和 `ghostty-vt.dll`。包内 `BUILD-INFO.json` 记录精确源码提交和文件散列；产物保留 7 天。当前为未签名便携包，自动构建不会创建 Release、标签或修改服务器。Mac 暂时使用本地交叉构建。
+运行 `Herdr Desktop.exe`，保持 `ghostty-vt.dll` 与程序在同一目录。当前是未签名便携包；PDF 预览需要系统 WebView2。
 
 ## Linux x86_64
 
-提供两种安装方式，界面、电脑/项目/Agent 分组、对话与审批、原生终端、附件、文件/PDF 预览和外观设置均复用 Windows 版。
+从 [desktop-linux CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-linux.yml) 成功运行的 Artifacts 下载 `herdr-desktop-linux-amd64-<构建编号>`，解压后执行 `sha256sum -c SHA256SUMS.txt`。
 
-- **Debian / Ubuntu**：下载 `herdr-desktop_0.1.0_amd64.deb`，执行 `sudo apt install ./herdr-desktop_0.1.0_amd64.deb`，从应用菜单打开 **Herdr Desktop**，或执行 `herdr-desktop`。
-- **不需要 root 的用户安装**：把 `install.sh` 和 `herdr-desktop-0.1.0-linux-amd64.tar.gz` 放在同一目录，执行 `sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz`，再运行 `~/.local/bin/herdr-desktop`。安装到 `~/.local`；`sh install.sh --uninstall` 卸载应用但保留配对/草稿数据。
-- **直接试用**：解压到一个独立目录，执行 `./herdr-desktop --demo`。必须保留同目录的 `libghostty-vt.so` 和图标资源。演示模式使用虚构数据，不读取真实配对。
+**Debian / Ubuntu：**
 
-运行环境需要 **GTK 3、WebKitGTK 4.1、libsecret 和正在运行的 Secret Service**。`.deb` 会声明前三项库依赖；普通桌面一般已有 GNOME Keyring，KWallet / KeePassXC 需启用 Secret Service。最小化桌面可安装、启动并解锁 GNOME Keyring。缺少或未解锁钥匙环时不降级成明文保存；先处理系统钥匙环，再启动客户端。纯 SSH、没有图形会话的服务器不适合运行此 GUI。
+```sh
+sudo apt install ./herdr-desktop_0.1.0_amd64.deb
+herdr-desktop
+```
 
-Linux 包由独立的 [`desktop-linux`](../.github/workflows/desktop-linux.yml) 构建；推送或 PR 涉及桌面/终端协议时自动触发，也可手动运行。从成功运行的 Artifacts 下载 `herdr-desktop-linux-amd64-<构建编号>`，内含 `.deb`、`.tar.gz`、用户安装脚本、`BUILD-INFO.json` 和 `SHA256SUMS.txt`，保留 7 天。校验：`sha256sum -c SHA256SUMS.txt`。**目前是未签名开发预览，不自动发布 Release，也不部署 Relay。** 本地构建若含未提交修改，元数据会明确记录 `source_dirty: true`；CI 包要求源码干净。
+**免 root 用户安装：**
 
-自动验证基线为 Ubuntu 24.04 x86_64：使用包内固定哈希的终端库跑桌面测试，在独立 Xvfb / D-Bus / HOME 中检查用户安装/卸载保留数据、真实 GTK 窗口、钥匙环和系统 PDF 渲染；Linux PTY 测试覆盖中文输入和尺寸变化。其他发行版、Wayland 会话、真实中文输入法以及 ARM64 仍需另行验证；PDF 能力依赖系统 WebKitGTK 版本。
+```sh
+# install.sh 和归档放在同一目录。
+sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz
+~/.local/bin/herdr-desktop
+# 卸载程序但保留配对与草稿：sh install.sh --uninstall
+```
+
+需要 **GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**，例如 GNOME Keyring。`.deb` 声明库依赖，钥匙环仍需在桌面会话中运行；KWallet / KeePassXC 需启用 Secret Service。
+
+缺少钥匙环时不会降级为明文保存。纯 SSH、无图形会话的服务器不适合运行本客户端。Linux CI 验证环境为 Ubuntu 24.04 x86_64；其他发行版、ARM64 和不同桌面环境不视为已验证。
+
+## macOS
+
+目前需[源码构建](#源码构建)，没有已签名、公证的安装包。构建目标 `darwin/universal` 包含 Intel 和 Apple silicon；签名、公证和实际分发需在 Mac 完成。
+
+## 配对与使用
+
+1. 在电脑上使用对应 Relay 的 `run.sh tcp-pair '我的桌面'` 生成新邀请。
+2. 在客户端点击“添加电脑”，粘贴 `herdr-tcp://` 邀请并命名。
+3. 左侧选择电脑、项目与 Agent；中间切换“对话 / 终端”，右侧打开工作区文件。
+
+电脑与项目支持展开／折叠。可管理 Agent、发送消息、处理审批、查看 Markdown / 工具调用、上传附件及下载文件；操作权限由 Relay 的设备角色和当前目标验证决定。
+
+配对信息与草稿加密保存在用户配置目录的 `Herdr Desktop/state.enc`。加密密钥保存在 Windows Credential Manager、macOS Keychain 或 Linux Secret Service。不要导入手机或 Relay 主密钥替代独立配对。
+
+### Linux 连接本机 Relay
+
+“添加电脑 → 查找本机 Relay → 连接本机”可以发现同一 Linux 用户下的本机实例。首次空列表会查找，但不会自动授权。
+
+本机连接走回环 E2EE WebSocket，不经过 Gateway。它通过 Relay 的私有配对 socket 申请独立设备授权，不读取 `relay.env` 或设备库，不提取主密钥。已配对同一 Relay 时保留电脑身份、草稿与角色。
+
+需要同一用户、可读取其 `/proc` 元数据、可信私有配对 socket 和回环地址服务。容器跨用户 / PID 空间、其他用户的 Relay 或未提供配对接口的版本不会自动连接；仍可使用远程邀请。凭据被撤销后不会静默重新授权。
+
+### 终端与外观
+
+桌面交互终端需要此分支的 Relay，以及支持私有终端协议 **22** 的 Herdr。客户端检查 `desktop_terminal_v1` 能力；附加／断开终端不会结束 Agent，也不会强行夺取其他控制者的输入权。
+
+“外观”可分别设置应用和终端的深浅色。终端对比度增强与 Codex 浅色背景柔化只影响本机显示，不修改远端输出。
+
+默认文件范围是当前 Agent 工作区；控制者可明确授权更大的只读范围，详见[文件访问](../docs/file-access.md)。
+
+## 源码构建
+
+需要 **Go 1.27.3**；MyGo **v0.8.1** 和终端库版本固定，构建工具负责下载并验证终端库。
+
+**Windows（PowerShell）：**
+
+```powershell
+cd desktop
+./scripts/build.ps1 -Platform windows/amd64
+& './build/windows-amd64/Herdr Desktop.exe'
+```
+
+**Linux：**
+
+Ubuntu 24.04 的运行依赖可先安装（其他发行版包名可能不同）：
+
+```sh
+sudo apt install libgtk-3-0t64 libwebkit2gtk-4.1-0 libsecret-1-0 gnome-keyring
+```
 
 ```sh
 cd desktop
 ./scripts/build-linux.sh
+python3 scripts/package-linux.py
+# 安装包：build/artifacts-linux-amd64/
+```
+
+**macOS universal：**
+
+```sh
+cd desktop
+go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
+```
+
+对生成的可执行文件加 `--demo` 可使用虚构数据查看界面，不读取真实配对。构建输出位于 `desktop/build/`；运行时保留同目录资源。
+
+### 测试
+
+在 `desktop/` 中先构建终端库，再运行 `go test ./...` 和 `go vet ./...`。Linux 可指定：
+
+```sh
 MYGO_GHOSTTY_VT="$PWD/build/linux-amd64/libghostty-vt.so" go test ./...
 python3 scripts/test_package_linux.py
-./scripts/smoke-linux.sh  # 需要 xvfb、dbus-run-session、gnome-keyring、xdotool、ImageMagick
-python3 scripts/package-linux.py
-# 可安装包在 build/artifacts-linux-amd64/；这不会发布或上传。
+./scripts/smoke-linux.sh
 ```
 
-## 本地构建（Windows / macOS）
-
-```powershell
-cd desktop
-go tool mygo build -platform windows/amd64,darwin/universal -skip-installer -skip-dmg -skip-notarize
-go test ./...
-go vet ./...
-```
-
-也可在 Windows 使用 `./scripts/build.ps1`，它优先使用本仓库 `.tools/go` 下的工具链。Windows 终端测试需要先构建，测试会查找构建产物中的 DLL。
-
-macOS universal 构建包含 Apple silicon 和 Intel。Windows 上只能交叉编译；签名、公证、DMG 和 macOS 实机验证需在 Mac 完成。当前产物为开发预览版，不是已签名的正式发布。
-
-```powershell
-& './build/windows-amd64/Herdr Desktop.exe' --demo
-```
-
-演示模式使用独立的示例数据。「打开本机终端」仅供界面测试；演示模式不使用已配对电脑，不开放文件下载。
-
-## 验证范围与待办
-
-已覆盖无窗口 UI 导航、中文输入组合、原生终端输入/缩放、E2EE 协议向量、真实本地 TCP 配对测试服务、Unix direct attach 测试服务、文件分页与隔离、大于预览上限的下载、损坏分块、取消及目标文件保护。
-
-Windows PDF 已用隐藏窗口实际渲染并截图验证；菜单折叠/持久化、引用点击、Markdown 相对链接、两级工具展开、图片放大、运行计时失效检查均有本地测试。
-
-新增测试覆盖管理权限/过期目标、未知写入状态持久化、默认启动参数隔离、原生菜单/表单、问答指纹与单选互斥、加密上传回复路由、分块校验/取消、增量消息漏序拒绝、缓存边界和电脑数据隔离。
-
-新增范围测试覆盖全盘只读请求、撤销与晚到回复隔离、工作区外 Markdown 图片；历史测试覆盖 4,260 条/71 页恢复、持久化阅读边界、整理游标、过期快照、重叠工具更新和暂停继续。
-
-终端测试通过加密连接验证无需等待前一输入确认、32 个操作上限、输入/尺寸/滚动顺序、拒绝后关闭且不重发，以及输出绕过 UI 队列。模拟 40 ms 确认延迟的 16 次输入约为 650 ms（原串行等待）和 41 ms（并行等待确认）；这不是实际远端链路测速。
-
-还需真实部署环境端到端联调与 macOS 实机验证。完整差距与优先级见 [Android 功能核对](ANDROID_PARITY.md)。仍未包含文件编辑、WSS/WebRTC/多网关、托盘常驻和 Pi/OMP 专用提示投递。最近缓存最多 8 个会话、每个 300 条/1 MiB，更早历史从 Relay 自动恢复。本轮验证范围为桌面模块，不能据此声称全仓库测试通过。
-
-协议与权限说明见 [desktop-terminal.md](../docs/desktop-terminal.md)。
+图形 smoke test 还需 Xvfb、D-Bus、GNOME Keyring、xdotool 和 ImageMagick，依赖配置见 [Linux CI](../.github/workflows/desktop-linux.yml)。CI 下载包为预览产物，保留时间有限；构建不会自动发布 Release 或部署 Relay。

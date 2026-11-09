@@ -1,127 +1,69 @@
-# Herdr Mobile Relay Quick Start
+# 快速开始
 
-For the local Android **IP + native TCP** mode, use the [complete Relay/Gateway deployment guide](docs/native-deployment.md) and the bundle's `run.sh tcp-pair` command; the web/WSS walkthrough below remains separate.
+目标：让手机或桌面客户端连接运行 Herdr 的电脑。每台电脑部署一个 Relay，公网服务器部署一个 Gateway。
 
+## 已有正在运行的 Relay
 
-Connect one Linux or macOS computer to your phone through a temporary Cloudflare
-tunnel, or through a gateway that needs no Cloudflare account (see **Skip
-Cloudflare**). You need Herdr 0.7.5 or newer, Git, and `curl`. Herdr 0.9.0 is
-recommended for the complete live JSON inventory and workspace-management
-surface, but it is not the relay's minimum supported version.
+在该电脑上，以运行 Herdr 的同一用户执行：
 
-The relay shows the installed Herdr client separately from the running server
-version and protocol. If those differ, Settings reports the affected feature
-rather than treating the whole connection as unavailable.
-
-## 1. Install
-
-```bash
-herdr plugin install 0cv/herdr-mobile-relay
+```sh
+~/.local/share/herdr-pocket-relay/current/run.sh tcp-pair '我的手机'
 ```
 
-Choose **Temporary Cloudflare Tunnel** when the setup menu opens. If it does
-not:
+命令通过正在运行的 Relay 创建限时、单设备邀请。**不要再启动第二个 Relay，也不要重新初始化配置。**
+如果原来的安装路径不同，使用实际的 `run.sh`，并指定服务正在使用的配置：
 
-```bash
-herdr plugin action invoke setup --plugin herdr-mobile-relay.events
+```sh
+HERDR_RELAY_ENV=/绝对路径/relay.env /实际安装目录/run.sh tcp-pair '我的桌面'
 ```
 
-Approve missing user-level tools if prompted. The plugin downloads the exact
-verified relay bundle; it does not require Python, Node.js, a Go toolchain, or
-`sudo`.
+在客户端选择“添加电脑”，扫码或粘贴 `herdr-tcp://` 邀请，填写电脑名称。每个新客户端应单独生成邀请。
 
-## 2. Pair the Phone
+Linux 客户端连接同一用户的本机 Relay 时，可直接选择“查找本机 Relay → 连接本机”，不需要复制邀请。
 
-Both paths print the QR once they know which origin serves the phone app.
+## 首次部署
 
-On the tunnel path, wait for the temporary tunnel, then choose:
+### 1. 准备组件
 
-- **This temporary relay** for a simple one-computer trial.
-- **An existing installed Herdr app** to add this computer to an app you already
-  use.
+- 运行 Agent 的电脑：已安装并运行 Herdr，Relay 使用同一个普通用户。
+- 公网服务器：安装 Gateway，开放 **TCP 8377**；SSH 另作维护。
+- 手机或桌面：安装客户端，见 [README 下载区](README.md#下载-android-apk) 和 [桌面安装](desktop/README.md)。
 
-On the gateway path the QR follows registration, and the app origin has to be an
-installed Herdr app — a gateway carries relay traffic only. It reuses a recorded
-or `HERDR_PHONE_APP_URL` origin, and asks for one when neither exists.
+安装包与校验方法见[部署指南](docs/native-deployment.md)。Gateway 管理式接入需要 Relay `0.23.5+codexfix.20`、Gateway `0.23.5+codexfix.7` 或更新版本；下载时核对版本，不要拿不含此功能的旧发布包执行新命令。
 
-Scan the QR or open the complete HTTPS setup link. Keep it private: it contains
-the one-use bootstrap invitation in the URL fragment, which is never sent in
-the HTTP request. The installed app removes it after enrollment. iOS browser
-tabs retain it without redeeming it and direct you to the installed app, which
-prevents a disposable Safari tab from consuming the invitation. To use the tab
-itself as a device, choose **Pair this browser instead** in Settings. Each printed
-link pairs one phone within ten minutes; print it again for the next phone.
+### 2. 部署 Gateway
 
-Keep the Quick Start pane open. Ctrl-C stops the relay, and on the tunnel path
-the next run creates a new hostname and setup link.
+按 [Gateway 首次安装](docs/gateway-management.md#首次安装-gateway)安装并初始化管理员密钥。
+通过 SSH 转发打开管理页，生成一个以电脑名称标记的接入码。
 
-## 3. Try It
+### 3. 接入电脑
 
-Run an agent in Herdr or tap **＋** in the phone app. You can inspect output,
-send prompts, answer approvals and plan questions, upload images, and manage the
-agent lifecycle.
+按[电脑 Relay 安装](docs/native-deployment.md#安装电脑-relay)准备配置和用户服务。接入时执行：
 
-For Pi, enable **Settings → Pi Integration** for its computer, then run `/reload`
-in Pi or restart it. This is off until a controller enables it; the relay keeps
-owned copies current after updates. The CLI alternative is
-`bash relay/setup.sh --pi-install [agent-dir]`.
-
-On hosts with a published Piper runtime, setup downloads the engine and the
-English voice that reads responses aloud, cached outside the release so updates
-never fetch them again. Reading aloud turns itself on the first time. French,
-German, Spanish, and Chinese are downloaded on demand from the phone's Settings
-or with `relay/speech-voices.sh --languages fr`. Stock Apple Silicon uses
-macOS `say`; Settings does not offer neural voice downloads unless Piper is
-already installed.
-
-If a relay was updated after a failed Piper runtime extraction, reinstall only
-the cached engine with `relay/speech-voices.sh --reinstall-runtime`. The
-downloaded voices remain in place.
-
-## Skip Cloudflare
-
-Choose **Community WebRTC Gateway** in the setup menu. It checks the project's
-published gateways, saves the ordered list, then starts the relay and prints its
-QR. No account, no domain, no `cloudflared`. The gateways are run by the
-project: free, shared, best-effort.
-
-A gateway carries relay traffic only, so the phone app lives elsewhere: point
-`HERDR_PHONE_APP_URL` at an installed Herdr app, or host one with
-`make web-deploy`.
-
-A gateway cannot read your traffic — it copies frames that are already encrypted
-between the phone and the relay — and right after connecting both sides try to
-cut it out of the path with a direct WebRTC connection.
-
-[docs/transports.md](docs/transports.md) explains every choice and its settings;
-[docs/gateway-self-hosting.md](docs/gateway-self-hosting.md) covers running your
-own gateway.
-
-## Make It Permanent
-
-Add a domain to Cloudflare, then run:
-
-```bash
-herdr plugin action invoke install-service --plugin herdr-mobile-relay.events
+```sh
+~/.local/share/herdr-pocket-relay/current/run.sh gateway-join
+# 按提示粘贴 herdr-gateway:// 接入码，然后按 Enter。
+systemctl --user enable --now herdr-mobile-relay.service
 ```
 
-The wizard creates or resumes a dedicated tunnel, installs a background user
-service, verifies the public endpoint, and prints the stable QR. Repeat it on
-each computer with a different hostname and add every QR to the same phone app.
+Gateway 接入码用于给电脑签发独立注册凭据，**不能粘贴到手机 App**。旧 Relay 迁移须用管理页中该电脑的“重新接入”，见[迁移已有电脑](docs/gateway-management.md#迁移已有电脑)。
 
-[docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md) has the rest: hostname
-changes, the full action list, teardown, and uninstall.
+### 4. 配对客户端
 
-## Troubleshooting
+确认 Relay 健康后，执行本页开头的 `tcp-pair`，再在客户端添加电脑。以后连接其他电脑时，重复接入和配对流程即可。
 
-- **Port 8375 is busy:** stop the previous Quick Start or installed service.
-- **Temporary URL fails:** rerun Quick Start for a fresh hostname.
-- **Gateway registration times out:** check `HERDR_GATEWAY_URL` and outbound
-  HTTPS access; `curl -s localhost:8375/healthz` reports `gateway.registered`.
-- **App still shows the previous release after the relay updates:** open Settings,
-  choose **Check for Updates**, then **Load Update**. A separately hosted app
-  must be published by its configured deployment-owner relay first.
-- **Need the stable QR again:** invoke `setup-link`.
-- **Need relay log filtering:** see [Cloudflare tunnel logging](docs/cloudflare-tunnel.md#relay-logging).
+## 确认连接正常
 
-[README.md](README.md) indexes the rest of the documentation.
+```sh
+systemctl --user is-active herdr-mobile-relay.service
+curl -fsS http://127.0.0.1:8375/healthz
+```
+
+应看到 `readiness: "ready"`、`gateway.registered: true`，并确认客户端能列出该电脑的工作空间和 Agent。若服务使用自定义端口，替换上面的 `8375`。
+
+- 注册失败：检查 Gateway 地址、电脑是否被禁用／撤销、连接数量限制。
+- 没有 Agent：检查 Relay 用户、Herdr 可执行文件和 socket 路径。
+- 历史无法确认：先查看会话绑定诊断，不要删除设备库或重新配对来“修复”历史。
+- 更新版本：按[升级步骤](docs/native-deployment.md#升级已有安装)保留现有配置与配对。
+
+更多诊断见[部署指南](docs/native-deployment.md#排障)。旧版 Gateway 仍可使用[静态白名单接入](docs/native-deployment.md#旧版静态白名单接入)。

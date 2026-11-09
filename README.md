@@ -1,4 +1,178 @@
-# Herdr Relay Extra + Herdr Pocket
+# Herdr Relay Extra
+
+一套连接 **多台 Herdr 电脑与多个客户端**的自托管系统。Relay 负责接入电脑上的 Herdr，Gateway 负责电脑注册和加密流量转发，Android 与桌面客户端提供对话、终端、审批和文件操作界面。
+
+[系统架构](#系统架构) · [Gateway](#gateway) · [Relay](#relay) · [Clients](#clients) · [快速开始](QUICKSTART.md) · [安装与升级](docs/native-deployment.md)
+
+## 系统架构
+
+```mermaid
+flowchart LR
+    subgraph PC1["电脑 A"]
+        subgraph R1["Relay A · 电脑接入层"]
+            H1["Herdr"]
+            A1["工作空间 / Agents"]
+            H1 --- A1
+        end
+    end
+    subgraph PC2["电脑 B"]
+        subgraph R2["Relay B · 电脑接入层"]
+            H2["Herdr"]
+            A2["工作空间 / Agents"]
+            H2 --- A2
+        end
+    end
+    subgraph PCN["电脑 N"]
+        subgraph RN["Relay N · 电脑接入层"]
+            HN["Herdr"]
+            AN["工作空间 / Agents"]
+            HN --- AN
+        end
+    end
+    G["Gateway<br/>电脑接入管理<br/>加密流量转发"]
+    R1 <-->|"TCP / E2EE"| G
+    R2 <-->|"TCP / E2EE"| G
+    RN <-->|"TCP / E2EE"| G
+    G <--> C1["Android 客户端"]
+    G <--> C2["Windows 客户端"]
+    G <--> C3["Linux 客户端"]
+    G <--> CN["更多客户端…"]
+```
+
+- **每台电脑一个 Relay**：与 Herdr / Agent 使用同一用户，提供会话、终端、文件和设备鉴权接口。图中外框表示接入边界，Relay、Herdr 和 Agent 仍是独立进程。
+- **多个 Relay 连接一个 Gateway**：电脑主动向 Gateway 建立出站连接，电脑本身无需开放公网端口。Gateway 只转发加密的应用数据，不保存或解析对话正文。
+- **多个客户端连接 Gateway**：一个客户端可配对多台电脑，一台电脑也可授权多个客户端；每个客户端独立配对、独立授权。
+- **本机连接例外**：Linux 客户端可直连当前用户的本机 Relay，不经过 Gateway，但仍进行设备鉴权和端到端加密。
+
+| 组件 | 部署位置 | 源码 |
+| --- | --- | --- |
+| Gateway | 公网服务器 | `cmd/herdr-gateway` |
+| Relay | 每台运行 Herdr 的电脑 | `cmd/herdr-mobile-relay` |
+| Herdr Pocket | Android 手机 / 平板 | `herdr-android/` |
+| Herdr Desktop | Windows / Linux / macOS | `desktop/` |
+
+## 获取源码
+
+只使用预编译包可跳过编译，直接看[服务端安装包](#服务端安装包)或 [Clients](#clients)。源码构建先执行一次：
+
+```sh
+git clone https://github.com/cxnaive/herder_relay_extra.git
+cd herder_relay_extra
+```
+
+下文 Gateway / Relay 命令在仓库根目录运行，客户端命令进入各自子目录。工具链固定版本见 `go.mod`、Gradle Wrapper 和 CI 配置。
+
+## Gateway
+
+Gateway 管理允许接入的电脑，将客户端连接路由到对应 Relay。管理页支持电脑命名、在线状态、客户端连接数、月度转发流量、限时接入码、禁用／恢复、撤销凭据和容量设置。
+
+### 编译
+
+在仓库根目录执行；Go 版本以 `go.mod` 为准，当前为 **1.27.3**：
+
+```sh
+mkdir -p bin
+CGO_ENABLED=0 go build -trimpath -o bin/herdr-gateway ./cmd/herdr-gateway
+```
+
+### 部署
+
+以下是**首次部署的前台启动示例**，将 `PUBLIC_HOST` 替换为公网 IP 或域名。生产环境的固定目录、专用用户和 systemd 服务见 [Gateway 安装与管理](docs/gateway-management.md)。
+
+```sh
+# 只初始化一次；妥善保存命令输出的管理员密钥。
+./bin/herdr-gateway admin-init --state-dir "$HOME/.local/share/herdr-gateway/management"
+
+HERDR_GATEWAY_TCP_ADDR=0.0.0.0:8377 \
+HERDR_GATEWAY_ADDR=127.0.0.1:18377 \
+HERDR_GATEWAY_STUN_ADDR= \
+HERDR_GATEWAY_ADMIN_STATE="$HOME/.local/share/herdr-gateway/management" \
+HERDR_GATEWAY_ADMIN_ADDR=127.0.0.1:18378 \
+HERDR_GATEWAY_ADMIN_ORIGIN=http://127.0.0.1:18378 \
+HERDR_GATEWAY_PUBLIC_ENDPOINT=tcp://PUBLIC_HOST:8377 \
+./bin/herdr-gateway
+```
+
+只对公网开放 **TCP 8377**；健康接口 `18377` 和管理页 `18378` 保持回环监听。通过 SSH 转发管理页：
+
+```sh
+ssh -N -L 18378:127.0.0.1:18378 user@PUBLIC_HOST
+# 浏览器打开 http://127.0.0.1:18378
+```
+
+登录后为电脑生成 `herdr-gateway://` 接入码。它用于 Relay 注册，不是客户端配对邀请。电脑数量没有固定为两台，可在管理页调整连接上限。
+
+管理式接入需要 **Gateway `0.23.5+codexfix.7` 与 Relay `0.23.5+codexfix.20` 或更新版本**。已有旧版可继续使用静态白名单；迁移时保留电脑 ID 和客户端配对，见[迁移说明](docs/gateway-management.md#迁移已有电脑)。
+
+## Relay
+
+Relay 与运行 Herdr 的用户一致，访问该用户的 Herdr socket、Agent 会话和工作区。它负责会话定位、终端转发、文件访问及客户端授权；Gateway 不代替 Relay 读取电脑数据。
+
+### 编译
+
+```sh
+# 仓库根目录，Go 1.27.3
+CGO_ENABLED=0 go build -trimpath -o bin/herdr-mobile-relay ./cmd/herdr-mobile-relay
+```
+
+### 部署与接入
+
+先安装并运行 Herdr。以下仅用于**首次初始化**；已有安装不要重新生成主密钥或删除设备库。
+
+```sh
+export HERDR_RELAY_ENV="$HOME/.config/herdr-mobile-relay/relay.env"
+python3 deploy/native-relay/init-config.py --gateway tcp://PUBLIC_HOST:8377
+set -a
+. "$HERDR_RELAY_ENV"
+set +a
+
+# 粘贴 Gateway 管理页生成的接入码。
+./bin/herdr-mobile-relay gateway-join
+
+# 前台运行；另开终端进行客户端配对。
+HERDR_WEB_ROOT="$PWD/web" ./bin/herdr-mobile-relay serve
+```
+
+生产安装使用版本目录、`current` 链接和 **systemd 用户服务**，步骤见[电脑 Relay 安装](docs/native-deployment.md#安装电脑-relay)。不要以 root 身份运行电脑 Relay，也不要同时启动两个实例使用同一设备库。
+
+### 配对客户端
+
+在另一个终端加载**相同 Relay 配置**，为每个客户端生成独立邀请：
+
+```sh
+# 使用部署包及其用户服务时：
+~/.local/share/herdr-pocket-relay/current/run.sh tcp-pair '我的手机'
+
+# 源码前台运行时：在新终端加载相同配置
+export HERDR_RELAY_ENV="$HOME/.config/herdr-mobile-relay/relay.env"
+set -a; . "$HERDR_RELAY_ENV"; set +a
+./bin/herdr-mobile-relay tcp-pair '我的桌面'
+```
+
+将 `herdr-tcp://` 邀请交给客户端。Gateway 接入码、客户端邀请、管理员密钥是三种不同凭据，不能混用。
+
+<!-- native-downloads:start -->
+### 服务端安装包
+
+已发布的 **[native-v0.23.5-codexfix.19](https://github.com/cxnaive/herder_relay_extra/releases/tag/native-v0.23.5-codexfix.19)** · Linux x86_64 完整部署包
+
+- [`herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz)
+- [`herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz)
+- [`SHA256SUMS.txt`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/SHA256SUMS.txt)
+
+电脑安装 Relay，公网服务器安装 Gateway。安装、配对与保留数据升级见[部署指南](docs/native-deployment.md)。
+ARM64 / macOS 的 CI 产物为独立二进制，不是上述完整部署包。
+
+当前源码包含尚未发布的更新。需要新功能时，可从 [CI 预览构建](https://github.com/cxnaive/herder_relay_extra/actions/workflows/build-artifacts.yml) 的成功运行中下载 `native-bundles-linux_amd64`，并核对包内版本；CI 附件有保留期限。
+<!-- native-downloads:end -->
+
+## Clients
+
+各客户端都通过 Relay 获取对话、终端、审批与文件；多电脑按“电脑 → 工作空间 → Agent”组织。客户端中的电脑名称是自己的备注，不改变 Relay 身份，也不与 Gateway 的管理备注自动同步。
+
+### Android · Herdr Pocket
+
+原生 Android 客户端，支持历史分页、工具折叠、终端输入、文件预览／上传／下载，以及可选的后台任务完成提醒。
 
 <!-- pocket-preview:start -->
 <table>
@@ -25,156 +199,97 @@
 <sub>0.2.23 界面预览 · 使用演示数据的原生控件渲染，点击查看大图。</sub>
 <!-- pocket-preview:end -->
 
-当前可配套使用的 **Relay 源码 + 原生 Android App 源码**。APK 及编译好的 Linux Relay/Gateway 通过本仓库的 **GitHub Releases** 发布，不存放在 Git 仓库目录中。
-
-| 组件 | 当前源码版本 | 位置 |
-| --- | --- | --- |
-| 电脑 Relay | `0.23.5+codexfix.19` | 仓库根目录，`cmd/herdr-mobile-relay` |
-| 原生 TCP Gateway | `0.23.5+codexfix.6` | `cmd/herdr-gateway`，`deploy/native-tcp/` |
-| Herdr Pocket Android | `0.2.31` / versionCode `34` | `herdr-android/` |
-| Herdr Desktop Windows / Linux / macOS | `0.1.0` 开发预览 | [`desktop/`](desktop/README.md) |
-
-桌面版采用原生界面，左侧按电脑、项目和 Agent 导航，中间切换对话与交互终端，右侧浏览工作区文件并下载。构建与使用方法见 [Herdr Desktop](desktop/README.md)。尚未发布正式安装包。
-
-Windows 便携包由 [desktop-windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 自动测试并构建，可在成功运行的 Artifacts 中下载。 Linux x86_64 同款客户端新增独立 `desktop-linux` CI，生成 `.deb` 和免 root 用户安装包；系统依赖及安装步骤见 [Linux 桌面版](desktop/README.md#linux-x86_64)。 Linux 还可在“添加电脑”中发现并直连当前用户的本机 Relay，无需复制邀请、也不经过远端 Gateway，仍使用独立设备鉴权。日常 CI 按组件触发，完整浏览器/模拟器/竞态验证改为手动深度检查，见 [CI 说明](docs/native-ci.md)。
-
-本次按当前可用源码快照替换此前根目录的 0.24.0 文件扩展实现，不把两条不同基线混为同一版本。组件对应关系及源码来源见 [VERSION.json](VERSION.json)。旧内容仍可从 Git 历史查看。
-
-自 **Android 0.2.24 / Relay codexfix.12** 起引入主会话验证：验证终端主进程、独占 runtime 与会话存储，不再信任错误的 Herdr session ID；暂时失去证据时保留原会话缓存和草稿，但禁止不确定的输入。旧 APK 不支持新的绑定租约，需配套更新；Gateway codexfix.6 不变。[发现机制与边界](docs/primary-session-binding.md)。
-
-当前源码仅对 **Codex** 使用终端范围内的 runtime 主会话发现：先排除有明确父子关系的子代理，主线程唯一时直接采用；共享模式仍有多个主线程时，只用匹配候选的 Herdr 上报 ID 消除歧义。无法确认时不猜选，提示可尝试 `codex --no-daemon` 并检查 hook（不保证修复）。其他 agent 保持原有 Herdr Relay 流程；不执行 `/status`、动态 hook 或修改 Codex。相同 ID 刷新缓存，不同 ID 撤销旧请求并隔离历史，详见[会话身份与缓存边界](docs/primary-session-binding.md)。
-
-**`--no-daemon` 已有独立关联路径**：只读验证该 TUI 进程实际持有的会话写锁及精确 ID 元数据，不查询共享后台。主线程唯一即可绑定，不依赖 hook；新会话可能要等首轮输入落下元数据。若 `/new`、`/resume` 后仍持有多个主线程，旧 hook 上报不作消歧依据；codexfix.17 可用明确配置的标题 ID 消歧，否则保持未确认。独立模式模型设置请在电脑端操作；codexfix.19 从已验证主会话的起止记录读取本轮用时，不借用共享后台。缺少记录时仍明确显示用时未知；其他 agent 不受影响。
-
-Pocket **`0.2.31` / Relay `codexfix.19`**：修复 Codex 短暂空闲误报完成，`--no-daemon` / 自动内嵌模式可读取已绑定主会话的本轮起止记录。完成提醒要求先观察到同一轮运行，再读到明确成功结束；未知、断连、失败、旧轮记录不算完成。非常短的任务可能漏提醒，这是避免误报的明确取舍。通知表示“本轮完成”，不保证后续不会有新一轮任务。详见[运行状态与计时](docs/agent-run-state.md)。
-
-Pocket `0.2.27` 修复终端输出刷新打断手机输入法编辑：普通快照/增量不再重设输入框类型，保留拼音编辑状态、光标与草稿；密码输入仍单独处理。本次只更新 App，Relay codexfix.14 / Gateway codexfix.6 不变。
-
-Pocket `0.2.28` / Relay `codexfix.15` 将终端操作与主对话确认分开：主会话不唯一时，控制者仍可手动输入终端文本/按键、停止或重启 Agent。电脑端每次核对确切终端和请求代次；不猜选历史，不开放结构化审批或按对话发送。配套更新 App 和 Relay，Gateway 不变。
-
-Pocket `0.2.29` / Relay `codexfix.16`：Android 新建 Agent 增加“启动参数”输入行，选择 Codex 后可只填 `--no-daemon`（不要填 `codex` 命令名），初始提示仍单独填写。参数随该 Agent 的启动记录保存，重启时保留；需要配套更新 App 与 Relay，不自动修改正在运行的 Agent。含空格的参数值用引号，详见[启动参数边界](docs/development.md#agent-startup-arguments)。
-
-**Relay `codexfix.17` · Codex 远程启动默认标题**：Relay 新建或明确重启内置 Codex 时，默认附加 `-c 'tui.terminal_title=["thread-id","thread-name"]'`；手填的同名配置优先。无需更新 App，不修改全局 Codex 配置，不重启现有 Agent，也不默认启用 `--no-daemon`。Relay 读取 Herdr 的当前标题 ID，仅在该终端已验证的主会话候选里唯一匹配；共享模式和 `--no-daemon` 均适用。缺失、冲突或截断前缀不唯一则保持未确认，不按名称或对话文字猜选。手动启动不会自动加参数；标题仍是显示信号而非原子选择证明，详见[边界](docs/primary-session-binding.md#explicit-terminal-title-id-signal)。
-
-**Pocket `0.2.30` / Relay `codexfix.18`**：修复只有标题 `-c` 参数、没有 `--no-daemon` 时 Codex 实际使用内嵌运行时却被 Relay 误查共享后台的问题；以该 TUI 真正持有的排他写锁确认运行方式。标题唯一命中的目标单独验证主会话元数据，不再被其他未产生历史的旧写锁挡住；目标本身无元数据仍提示等待首轮输入。App 新建界面显示电脑端默认参数，额外参数可留空；已确认时显示完整 Session ID。标题参数更新的是终端窗口标题，并非 TUI 底部状态栏。
-
-“会话绑定诊断”通过[独立只读接口](docs/session-binding-diagnostics.md)提供带版本的可扩展 JSON；手机不查询可操作候选、不分析子代理或确认主会话，也不会自动上传诊断。
-
-下方链接指向已发布版本；`VERSION.json` 的 `android_release` / `native_release` 记录精确的产物来源和源码提交，独立于后续文档更新。
-
 <!-- android-downloads:start -->
-## 下载 Android APK
+#### 下载 Android APK
 
-**[0.2.31 / versionCode 34](https://github.com/cxnaive/herder_relay_extra/releases/tag/android-v0.2.31)**。
+**[Herdr Pocket 0.2.31](https://github.com/cxnaive/herder_relay_extra/releases/tag/android-v0.2.31)** · Android 9 及以上
 
-| 设备架构 | 下载 |
+| 设备 | APK |
 | --- | --- |
-| ARM64 手机 / 平板 | [Release · arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-arm64-v8a.apk) |
-| 32 位 ARM | [Release · armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-armeabi-v7a.apk) |
-| x86_64 模拟器 / 设备 | [Release · x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-x86_64.apk) |
+| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-arm64-v8a.apk) |
+| 32 位 ARM 设备 | [armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-armeabi-v7a.apk) |
+| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-x86_64.apk) |
 
-附件还包含三种 ABI 的 Debug APK、`BUILD-INFO.json` 和 `SHA256SUMS.txt`。
-所有 APK 直接复用 CI 固定签名产物，不重新编译或签名。**直接覆盖安装，不要卸载旧版**，以保留配对和草稿。
-Android 9 / API 28 及以上；仍使用原有调试证书，不是 Play 商店版本。自行构建的签名可能不同。
-
-发布来源：[CI run 42372075457](https://github.com/cxnaive/herder_relay_extra/actions/runs/42372075457)，源码 `8691e3be2435a8f4e02865c2be3326eeae6f6113`。
-构建成功不等于完整 check 或真机验收全绿；验证范围和已知缺口见 Release 说明及 `herdr-android/VALIDATION.md`。
-历史版本和更新内容保留在 Releases / CHANGELOG。
+更新时直接覆盖安装，**不要卸载旧版**，以保留配对与草稿。
+发布包沿用固定签名证书；自行构建的 APK 可能无法覆盖安装。
+校验文件、其他构建与版本说明见 Release 页面。
 <!-- android-downloads:end -->
 
-## CI 构建、固定签名与发布
+#### 编译与安装
 
-**Release 全部复用 CI 构建产物，发布也在 GitHub Actions 完成，不经本机中转。**
+需要 **JDK 21、Android SDK 35、Build Tools 35.0.0**，使用仓库自带的 Gradle Wrapper：
 
-- `build-artifacts`：构建 Linux/macOS 四架构 Relay/Gateway、Linux amd64 完整部署包，以及三种 ABI 的 Android APK；可信分支使用原 Pocket 证书签名。
-- `publish-components`：指定成功构建的 run ID，先只读验证，再明确发布；自动更新 README 下载链接、VERSION 发布来源和部署指南。不会在每次 push 时自动发版。
-- 已发布的同名版本不覆盖、不换包；冲突先升版本号。源标签始终指向产物的精确 commit，README 后续文档提交不移动标签。
-- CI 产物统一保留一天；GitHub Release 附件不受此期限影响。发布流程不重启服务器。
-
-操作入口：**Actions → publish-components → Run workflow**。详见[发布操作、签名与安全边界](docs/native-ci.md)。
-
-<!-- native-downloads:start -->
-## 下载 Relay / Gateway 与部署指南
-
-**[完整部署指南](docs/native-deployment.md)** · **[native-v0.23.5-codexfix.19](https://github.com/cxnaive/herder_relay_extra/releases/tag/native-v0.23.5-codexfix.19)**
-
-Linux x86_64 / amd64 完整部署包：
-
-- [`herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz)
-- [`herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz)
-- [`SHA256SUMS.txt`](https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19/SHA256SUMS.txt)
-
-包含二进制、Relay Web、配置/systemd 模板、初始化工具、部署说明及 BUILD-INFO。
-其他架构的 `native-binaries-*` 仅是 CI 可执行文件，不是完整部署包。
-公网服务器装 Gateway，运行 Herdr/Agent 的电脑装 Relay；已运行同版 Gateway 无需因 Relay 更新而重启。
-升级保留现有配置、密钥和设备库，不重复初始化，不重启 Herdr/Agent；发布流程不部署服务器。
-
-发布来源：[CI run 42372075457](https://github.com/cxnaive/herder_relay_extra/actions/runs/42372075457)，源码 `8691e3be2435a8f4e02865c2be3326eeae6f6113`。
-Android 为 Latest；服务端版本和 Android 版本分别编号。
-<!-- native-downloads:end -->
-
-## 已实现
-
-- 工作空间 / Tab 分组与可靠会话定位，修复恢复后的 Codex 历史读取。
-- 原生对话、连续工具调用的两层折叠、历史分页/缓存/加载反馈。
-- 手机适配终端字体和滚动历史。
-- 图片缩放、PDF/Markdown 全屏查看与通用本地文件引用；超限文件仍可下载/分享，支持进度与取消。
-- 可选的工作区外只读浏览/预览/下载：默认关闭，按手机凭据在 Relay 端授权，设备页可随时关闭。
-- 大图/工具结果挤出近期日志窗口时补回中间文字和看图调用，保持在工具双层折叠外。
-- 指定工作空间新建 Agent、重命名；Codex 模型/思考强度按会话切换，下一轮生效。
-- 对话顶部运行状态及真实本轮计时，不以打开页面或最后输出时间代替开始时间。
-- **App 内常驻监控**：开启后默认关注全部 Agent，新 Agent 自动纳入，可单独关闭完成提醒。原生通知、按轮次去重、点击回到确切会话；可测试完成提醒并直接进入声音设置。
-- **纯 IP + TCP** 或既有 HTTPS/WSS：应用消息沿用设备鉴权和 E2EE，原生模式不需要域名/证书。
-
-## 本地开发构建（不用于 Release 发布）
-
-需要 `go.mod` 指定的 **Go 1.27.3**。首次构建需要下载依赖。
-完整 Linux 归档使用 `scripts/package-native-release.sh 新输出目录`，然后 `python3 scripts/check-native-release.py 输出目录`；以下命令只构建单个可执行文件。
-
-```bash
-mkdir -p bin
-CGO_ENABLED=0 go build -trimpath \
-  -ldflags '-s -w -X main.version=0.23.5+codexfix.19 -X main.revision=source-build' \
-  -o bin/herdr-mobile-relay ./cmd/herdr-mobile-relay
-CGO_ENABLED=0 go build -trimpath \
-  -ldflags '-s -w -X main.version=0.23.5+codexfix.6 -X main.revision=source-build' \
-  -o bin/herdr-gateway ./cmd/herdr-gateway
-
-go test -p 1 ./...
-go vet ./...
-```
-
-Android 构建需要 JDK 21、Android SDK 35 / Build Tools 35.0.0；Gradle Wrapper 固定为 8.14.6：
-
-```bash
+```sh
 cd herdr-android
 export JAVA_HOME=/path/to/jdk-21
 export ANDROID_HOME=/path/to/android-sdk
-./gradlew --no-daemon testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug
+./gradlew --no-daemon testDebugUnitTest assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-APK 输出：`herdr-android/app/build/outputs/apk/debug/app-debug.apk`。
+也可把 APK 复制到手机安装。源码构建与发布包签名可能不同，不要为解决签名冲突而直接卸载含有配对数据的旧版。使用方法见 [Android 文档](herdr-android/README.md)。
 
-## 部署与配对
+### Windows · Herdr Desktop
 
-- 电脑 Relay 安装在运行 Herdr、保存项目/会话的电脑上；公网服务器只部署 Gateway。
-- 原生 TCP 业务仅需 **一个公网 TCP 端口 8377**，SSH 另作维护；Gateway HTTP 健康检查绑定 loopback，STUN 可关闭。
-- 示例地址只用于文档，必须换成自己的服务器。不要把运行时 `relay.env`、注册秘密、设备凭据、完整邀请链接或二维码提交到仓库。
-- `herdr-mobile-relay tcp-pair [设备名]` 通过正在运行的 Relay 的私有 Unix socket 创建限时设备邀请；调用时加载该 Relay 的环境配置。不要用另一进程直接写活跃的设备库。
-- 仅更新本地扩展二进制时，不要重启正在工作的 Herdr/Agent；先备份配置，只重启 Relay。
+从 [Windows CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-windows.yml) 成功运行的 Artifacts 下载便携包，解压后运行 `Herdr Desktop.exe`；同目录保留 `ghostty-vt.dll`。
 
-[原生 TCP 配置与安全边界](docs/native-tcp.md) · [Agent 管理与模型设置](docs/agent-management.md) · [状态及计时](docs/agent-run-state.md) · [后台监控说明](herdr-android/BACKGROUND-MONITORING.md)
+使用 Go **1.27.3** 在 Windows 编译：
 
-## 通知与安全边界
+```powershell
+cd desktop
+./scripts/build.ps1 -Platform windows/amd64
+& './build/windows-amd64/Herdr Desktop.exe'
+```
 
-常驻监控需要用户开启、允许通知，通知栏提供停止按钮；可增加耗电。Android Doze、厂商省电、强行停止或断网仍可能延迟/漏报。**这是手机常驻连接，不是 FCM/厂商云推送。**目前未进行用户真机锁屏验收。
+### Linux · Herdr Desktop
 
-TCP 本身不加密，应用数据由现有 ECDH/HMAC/AES-GCM E2EE 保护；路由/握手元数据、地址、大小和时序仍可见。未关闭原 HTTPS/WSS 证书校验，也未做独立安全审计。
+与 Windows 共用应用代码。需要图形桌面、**GTK 3、WebKitGTK 4.1、libsecret 和已解锁的 Secret Service**。
 
-验证记录：226 个 Android JVM/Robolectric 测试通过，真实本地 TCP+E2EE fixture 覆盖后台监控/静音/重连、超限文件下载/分享、工作区外权限切换、文件链接与系统保存后恢复原名；Relay codexfix.11 的 Go 全套 tests/vet 和 workspace/deviceauth/app/protocol race 检查通过。详细范围与未验证项见 [Android VALIDATION.md](herdr-android/VALIDATION.md)。
+从 [Linux CI](https://github.com/cxnaive/herder_relay_extra/actions/workflows/desktop-linux.yml) 成功运行的 Artifacts 下载 `.deb` 或用户安装包：
 
-## 许可证与历史代码
+```sh
+# Debian / Ubuntu
+sudo apt install ./herdr-desktop_0.1.0_amd64.deb
 
-遵循仓库 [LICENSE](LICENSE) 和第三方各自许可证；Android 依赖/引用来源见 [THIRD_PARTY.md](herdr-android/THIRD_PARTY.md)。保留上游 Go module 路径用于内部导入，不代表本分支由上游发布。
+# 或免 root 安装：install.sh 与归档放在同一目录
+sh install.sh herdr-desktop-0.1.0-linux-amd64.tar.gz
+~/.local/bin/herdr-desktop
+```
 
-`web/` 是当前 Relay 配套的原始生成快照，未手工改写 JS/压缩产物；手机 App 不使用此网页作为 Agent UI。`QUICKSTART.md`、上游 CI 和部分网页文档仍保留上游工作流；本地扩展发布以本首页和 VERSION.json 为准，Android release tag 使用 `android-v...`，不触发上游 `v*` 插件发布流水线。
+源码编译与打包：
+
+```sh
+cd desktop
+./scripts/build-linux.sh
+python3 scripts/package-linux.py
+# 安装包位于 build/artifacts-linux-amd64/
+```
+
+“添加电脑 → 查找本机 Relay”可以发现并连接当前用户的本机 Relay，无需复制邀请，不读取或导入手机凭据。详细依赖、钥匙环与使用说明见 [Linux 安装](desktop/README.md#linux-x86_64)。
+
+### macOS · Herdr Desktop
+
+目前仅提供源码构建路径，没有已签名、公证的安装包。在 Go **1.27.3** 环境下构建 universal 版本：
+
+```sh
+cd desktop
+go tool mygo build -platform darwin/universal -skip-installer -skip-dmg -skip-notarize
+```
+
+从 `desktop/build/` 中取得生成的应用；分发签名与公证需在 Mac 上完成。Windows / Linux / macOS 桌面客户端当前均为 **0.1.0 开发预览**，系统依赖与支持边界见[桌面文档](desktop/README.md)。
+
+## 安全与运维
+
+- **保留身份升级**：保留 Relay 主密钥、配置和设备库，只重启需要更新的 Relay / Gateway，不必重启 Herdr 或 Agent。
+- **默认最小文件范围**：默认访问当前 Agent 工作区，扩大只读范围需要控制者明确授权。
+- **不猜选历史**：会话身份无法确认时明确提示，不把另一段对话当作当前历史。
+- **加密边界**：应用数据端到端加密，地址、路由 ID、流量大小与时序仍可见。不要公开密钥、完整邀请或运行时配置。
+- **通知限制**：Android 提醒依赖常驻连接，不是云推送；断网、强停和系统省电可能导致延迟或漏报。
+
+## 文档索引
+
+[快速开始](QUICKSTART.md) · [安装、升级与排障](docs/native-deployment.md) · [Gateway 管理](docs/gateway-management.md) · [文件权限](docs/file-access.md) · [开发与测试](docs/building.md) · [CI 与发布](docs/native-ci.md)
+
+源码版本及发布来源见 [VERSION.json](VERSION.json)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。本项目基于 Herdr Relay 扩展，不是上游的官方发布；所有 Release 附件由 CI 构建和发布。
+
+遵循 [LICENSE](LICENSE)；Android 第三方说明见 [THIRD_PARTY.md](herdr-android/THIRD_PARTY.md)。

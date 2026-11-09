@@ -233,8 +233,9 @@ class PublisherTest(unittest.TestCase):
         (self.root / "herdr-android").mkdir(); (self.root / "docs").mkdir()
         (self.root / "VERSION.json").write_text(json.dumps(MANIFEST))
         gallery = '<!-- pocket-preview:start --><table>one by four unchanged</table><!-- pocket-preview:end -->\n'
+        system = '# System\n## Architecture\n```mermaid\nflowchart LR\n Relay --> Gateway --> Clients\n```\n## Clients\n### Android\n'
         blocks = '<!-- android-downloads:start -->old<!-- android-downloads:end -->\n<!-- native-downloads:start -->old<!-- native-downloads:end -->\n'
-        (self.root / "README.md").write_text(gallery + blocks + 'User prose stays\n')
+        (self.root / "README.md").write_text(system + gallery + blocks + 'User prose stays\n')
         (self.root / "herdr-android/README.md").write_text(blocks)
         (self.root / "docs/native-deployment.md").write_text(MANIFEST["native_release"]["tag"] + '\n' + MANIFEST["native_release"]["relay_artifact"])
         value = plan()
@@ -245,13 +246,29 @@ class PublisherTest(unittest.TestCase):
         value, receipt, gallery = self.docs_fixture()
         D.update_docs(self.root, value, receipt)
         first = (self.root / "README.md").read_text()
-        self.assertTrue(first.startswith(gallery)); self.assertIn('User prose stays', first)
+        self.assertTrue(first.startswith('# System\n## Architecture'))
+        self.assertIn('## Clients\n### Android\n' + gallery, first)
+        self.assertIn('User prose stays', first)
+        self.assertIn('## 安装\n', (self.root / 'herdr-android/README.md').read_text())
         self.assertIn('Herdr-Pocket-0.2.24-release-arm64-v8a.apk', first)
         self.assertIn('native-v0.23.5-codexfix.12', first)
         D.update_docs(self.root, value, receipt)
         self.assertEqual((self.root / "README.md").read_text(), first)
         meta = json.loads((self.root / "VERSION.json").read_text())
         self.assertEqual(meta["android_release"]["release_source_commit"], SHA)
+
+    def test_download_blocks_are_user_facing_and_distinguish_preview(self):
+        android = D.android_block(MANIFEST)
+        native = D.native_block(MANIFEST)
+        self.assertNotIn("发布来源", android + native)
+        self.assertNotIn("真机验收", android + native)
+        self.assertLess(len(android), 1500)
+        self.assertLess(len(native), 1500)
+        current = copy.deepcopy(MANIFEST)
+        current["relay"]["version"] = "0.23.5+codexfix.99"
+        self.assertIn("尚未发布", D.native_block(current))
+        current["native_release"]["relay_artifact"] = "herdr-mobile-relay_0.23.5-codexfix.99_linux_amd64.tar.gz"
+        self.assertNotIn("尚未发布", D.native_block(current))
 
     def test_missing_readme_marker_changes_no_files(self):
         value, receipt, _ = self.docs_fixture()

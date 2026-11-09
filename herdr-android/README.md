@@ -1,81 +1,67 @@
 # Herdr Pocket · Android
 
-与本仓库电脑 Relay 配套的原生 Android 客户端，不使用 WebView 运行 Agent 界面。
+连接多台 Herdr 电脑的原生 Android 客户端。手机通过 Gateway 连接电脑 Relay；每台电脑独立配对，按电脑、工作空间和 Agent 展示。
 
-当前源码 `0.2.31` / versionCode `34` 配合 Relay codexfix.19，按 [Codex 终端主会话策略](../docs/primary-session-binding.md) 展示 runtime 唯一主线程，或以匹配的 Herdr 上报消除多主线程歧义；无法确认时提示可尝试 `--no-daemon`，其他 agent 不改变流程；同会话缓存会刷新，换会话撤销旧请求并切换缓存。下载版本及构建来源以下方已发布记录为准。
-
-新建 Codex 时会显示 Relay 上报的“电脑端默认附加”参数；下面的“额外启动参数”留空也会使用默认值，不需要手填或复制。已确认主会话时在页面显示完整 Session ID，运行时/标题失败与首轮尚无元数据分别说明。
-
-新建 Agent 时可在“额外启动参数”行填写 `--no-daemon`，只填参数、不填 `codex` 命令名。初始提示单独填写；重启由 App 创建的 Agent 时保留参数，Relay 服务重启后也不丢失。需配套更新 Relay；旧版不支持时明确提示升级，不会忽略参数。不会自动改变现有 Agent 的启动方式。
-
-会话识别完全由 Relay 完成；手机只跟随最终会话 ID。菜单中的“会话绑定诊断”使用[只读诊断接口](../docs/session-binding-diagnostics.md)，展示可扩展 JSON，不查询可操作候选、不分析子代理或确认主会话。
+系统结构与服务端部署见[项目首页](../README.md)和[快速开始](../QUICKSTART.md)。
 
 <!-- android-downloads:start -->
 ## 安装
 
-**[0.2.31 / versionCode 34](https://github.com/cxnaive/herder_relay_extra/releases/tag/android-v0.2.31)**。
+**[Herdr Pocket 0.2.31](https://github.com/cxnaive/herder_relay_extra/releases/tag/android-v0.2.31)** · Android 9 及以上
 
-| 设备架构 | 下载 |
+| 设备 | APK |
 | --- | --- |
-| ARM64 手机 / 平板 | [Release · arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-arm64-v8a.apk) |
-| 32 位 ARM | [Release · armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-armeabi-v7a.apk) |
-| x86_64 模拟器 / 设备 | [Release · x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-x86_64.apk) |
+| 大多数手机 / 平板 | [arm64-v8a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-arm64-v8a.apk) |
+| 32 位 ARM 设备 | [armeabi-v7a](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-armeabi-v7a.apk) |
+| x86_64 设备 / 模拟器 | [x86_64](https://github.com/cxnaive/herder_relay_extra/releases/download/android-v0.2.31/Herdr-Pocket-0.2.31-release-x86_64.apk) |
 
-附件还包含三种 ABI 的 Debug APK、`BUILD-INFO.json` 和 `SHA256SUMS.txt`。
-所有 APK 直接复用 CI 固定签名产物，不重新编译或签名。**直接覆盖安装，不要卸载旧版**，以保留配对和草稿。
-Android 9 / API 28 及以上；仍使用原有调试证书，不是 Play 商店版本。自行构建的签名可能不同。
-
-发布来源：[CI run 42372075457](https://github.com/cxnaive/herder_relay_extra/actions/runs/42372075457)，源码 `8691e3be2435a8f4e02865c2be3326eeae6f6113`。
-构建成功不等于完整 check 或真机验收全绿；验证范围和已知缺口见 Release 说明及 `herdr-android/VALIDATION.md`。
-历史版本和更新内容保留在 Releases / CHANGELOG。
+更新时直接覆盖安装，**不要卸载旧版**，以保留配对与草稿。
+发布包沿用固定签名证书；自行构建的 APK 可能无法覆盖安装。
+校验文件、其他构建与版本说明见 Release 页面。
 <!-- android-downloads:end -->
 
-## 电脑名称
+## 首次连接
 
-0.2.24 已包含配对时确认电脑名称，以及设备卡片上的本机重命名。仅改显示备注，不改 Relay、连接或配对；离线也可改名。详见[电脑名称与分组说明](AGENT-GROUPS.md)。
+1. 在运行 Herdr 的电脑上，通过该 Relay 的 `run.sh tcp-pair '我的手机'` 创建单设备邀请。
+2. 在 App 中选择“添加电脑”，扫码或粘贴 **`herdr-tcp://`** 邀请。
+3. 填写电脑名称，选择工作空间和 Agent。
 
-## 功能
+电脑名称是此客户端的备注，离线也可修改，不改变 Relay ID 或配对。连接第二台电脑时重复流程；不要把 Gateway 的 `herdr-gateway://` 接入码当成手机邀请。
 
-工作区按当前目录读取，文件数量较多时点“加载更多目录项”；搜索只筛选已加载条目，不宣称全项目搜索。默认隐藏点号开头的条目，可用“显示隐藏文件/目录”开关查看；符号链接/特殊文件不会被跟随。
+## 日常使用
 
-- 多电脑、工作空间和 Herdr Tab 分组；重命名、在指定工作空间创建 Agent。
-- 原生对话、工具调用两层折叠、历史分页与缓存、加载进度。
-- 手机适配终端字体、滚动历史、快捷键与原生输入。
-- 图片放大及 PDF/Markdown 全屏查看，工作区路径和文件校验。图像预览断线等待、恢复补载；可见时按需读取，重复请求合并和有限重试。
-- Codex 会话级模型/思考强度选择，来自运行时目录，下一轮生效。
-- 固定运行状态条：运行、审批/输入、完成、空闲、中断/失败；基于真实本轮开始时间计时，不用页面打开时间估计。
-- **常驻监控**：用户开启并允许通知后，默认关注全部 Agent，包括新建者；卡片/对话 ⋯ 可单独关闭完成提醒。前台与服务共享 E2EE 连接，轮次去重，点通知进入确切会话。
+- **对话**：Markdown、历史分页、连续工具调用折叠、审批和问答；支持缓存与断线重连。
+- **终端**：查看输出、输入文本及快捷按键。对话身份无法确认时，终端仍是独立的操作入口，权限以界面提示为准。
+- **Agent**：在指定工作空间创建、重命名、停止和重启；额外启动参数与初始提示分开填写。
+- **文件**：浏览当前工作区，预览图片 / PDF / Markdown，上传、下载和分享。默认不访问工作区外；扩大只读范围需控制者明确授权。
+- **状态**：显示可确认的运行状态和本轮用时；未知不等于已完成。
 
-完成提醒默认请求系统通知铃声和振动；在“常驻监控 / 完成提醒”中可发送测试通知，并直接打开该通道的声音/弹出设置。常驻监控状态静音；覆盖安装不会重置用户原先的静音或铃声选择。
+工作区搜索只过滤已加载的目录条目。历史图片依赖原文件仍然存在且位于允许范围内，不是永久截图归档。
 
-常驻通知可一键停止。请允许后台运行并按需关闭电池优化；这不是云推送，强停/省电/断网期间无法保证实时送达。锁屏不显示对话正文。
+## 后台提醒
 
-图片预览从当前 Agent 的工作区文件或消息内嵌数据读取，不是历史截图永久归档。若文件已删除、被覆盖或不在该工作区，重连无法恢复原始历史图像；不会为补图绕过路径权限。
+在“常驻监控 / 完成提醒”中开启监控并授予通知权限，可测试通知及调整通道声音。通知可打开对应会话，也可停止监控。
 
-详见 [常驻监控](BACKGROUND-MONITORING.md)、[功能与边界](NATIVE-PARITY.md)、[验证](VALIDATION.md)、[更新记录](CHANGELOG.md)。
+监控依赖手机常驻连接，**不是云推送**。系统省电、强行停止或断网可能导致延迟或漏报；不要仅凭没有提醒判断 Agent 是否已完成。覆盖安装不会重置系统通知通道的用户设置。
+
+详见[后台监控](BACKGROUND-MONITORING.md)。
 
 ## 构建
 
-要求 JDK 21、Android SDK Platform 35、Build Tools 35.0.0。Gradle Wrapper（8.14.6）及依赖已固定；首次构建需要网络下载依赖。
+需要 **JDK 21、Android SDK Platform 35、Build Tools 35.0.0**。使用仓库自带的 Gradle Wrapper，首次构建需要联网下载依赖。
 
-```bash
+```sh
 cd herdr-android
 export JAVA_HOME=/path/to/jdk-21
 export ANDROID_HOME=/path/to/android-sdk
 ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-输出：`app/build/outputs/apk/debug/app-debug.apk`。如依赖已缓存，可添加 `--offline`。
-不要提交 `local.properties`、`.gradle/`、`build/`、签名私钥或设备状态。
+APK 也可以复制到手机手动安装。已有发布版使用固定签名；本地默认签名可能不同，先确认兼容性，不要直接卸载旧版导致配对和草稿丢失。
 
-## 许可与上游
+不要提交 `local.properties`、构建缓存、签名私钥或设备状态。Release 附件只使用 CI 构建和签名，不手工上传本地 APK。
 
-许可证及依赖说明见 [LICENSE](LICENSE)、[THIRD_PARTY.md](THIRD_PARTY.md)。Android 早期参考源基于 upstream 0.24.0，保留在 `UPSTREAM.json` 和 `third_party/`；本次配套 Relay 则以根目录及 `../VERSION.json` 标注为准。
+## 进一步了解
 
-`relay/` 下是接口说明，不要求再打旧增量补丁。根目录已经包含当前 Relay 改动。私有部署记录、用户会话日志、配对密钥和旧诊断截图不随源码发布。
-
-## 文件预览、下载与电脑文件访问
-
-0.2.17 / Relay codexfix.11 将预览和下载分开：图片/PDF 预览最多 12 MiB，文本预览最多 1 MiB；超限仍可点开文件信息、下载或分享原文件。下载显示进度并支持取消，使用私有缓存，需要足够空间；中断后重试从头开始。
-
-对话及 Markdown 的本地文件链接不限扩展名。默认只访问当前 Agent 工作区；在“我的设备 → 对应电脑 → 工作区外文件访问”可由控制者明确开启更大只读范围。该授权按当前手机/电脑分别保存在 Relay，开启后文件页提供根目录、Agent 工作目录和绝对路径跳转。可能接触密钥等私密文件，请仅在信任设备时开启。详见 [文件访问说明](../docs/file-access.md)。
+[文件访问](../docs/file-access.md) · [电脑与工作空间分组](AGENT-GROUPS.md) · [验证说明](VALIDATION.md) · [更新记录](CHANGELOG.md) · [第三方许可](THIRD_PARTY.md)

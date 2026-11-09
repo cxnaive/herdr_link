@@ -35,6 +35,7 @@ for component in relay gateway; do
     go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.revision=$REVISION" -o "$STAGE/$binary" "./cmd/$binary"
     cp LICENSE VERSION.json "$STAGE/"
     cp docs/native-deployment.md "$STAGE/DEPLOYMENT.md"
+    cp docs/gateway-management.md "$STAGE/GATEWAY-MANAGEMENT.md"
     cp docs/native-tcp.md "$STAGE/NATIVE-TCP.md"
     cp docs/workspace-directory.md "$STAGE/WORKSPACE-DIRECTORY.md"
     cp docs/file-access.md "$STAGE/FILE-ACCESS.md"
@@ -54,6 +55,15 @@ info={"component":binary,"version":version,"revision":revision,"target":"linux/a
 if binary=="herdr-mobile-relay":
     info["web_source_version"]=json.loads((path/"web/version.json").read_text())["version"]
 (path/"BUILD-INFO.json").write_text(json.dumps(info,indent=2)+"\n")
+# Keep the two installation guides navigable after flattening them into a bundle.
+for name in ("DEPLOYMENT.md", "GATEWAY-MANAGEMENT.md"):
+    guide = path / name
+    text = guide.read_text()
+    text = text.replace("](gateway-management.md", "](GATEWAY-MANAGEMENT.md")
+    text = text.replace("](native-deployment.md", "](DEPLOYMENT.md")
+    text = text.replace("](../README.md", "](https://github.com/cxnaive/herder_relay_extra/blob/feat/android-file-companion/README.md")
+    guide.write_text(text)
+
 PY
     tar --sort=name --mtime="@$EPOCH" --owner=0 --group=0 --numeric-owner -C "$WORK" -czf "$OUTPUT/$NAME.tar.gz" "$NAME"
 done

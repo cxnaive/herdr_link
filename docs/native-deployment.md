@@ -1,242 +1,170 @@
-# Relay + Gateway 从零部署（Herdr Pocket / IP + TCP）
+# Relay / Gateway 安装与升级
 
-适用本仓库发布的 **Relay 0.23.5+codexfix.12、Gateway 0.23.5+codexfix.6、Android 0.2.17**。这不是上游插件的自动更新包。本次预编译服务端包仅提供 **Linux x86_64 / amd64**，不适用于 ARM64、Windows 或 macOS。
+本文面向 Linux x86_64 的完整部署包。Gateway 安装在公网服务器，Relay 安装在运行 Herdr 的电脑，使用与 Herdr / Agent 相同的普通用户。
 
-工作区逐层分页最低需要 Android 0.2.15 / Relay codexfix.9；本次 0.2.17 / codexfix.12 新增超限文件下载及可选的工作区外只读访问，包含中途对话漏补修复。已有 Gateway codexfix.6 不必重新安装。详见 `workspace-directory.md`、`file-access.md` 和 `conversation-recovery.md`（压缩包中为 `WORKSPACE-DIRECTORY.md`、`FILE-ACCESS.md`、`CONVERSATION-RECOVERY.md`）。
+管理式接入要求 Relay **0.23.5+codexfix.20**、Gateway **0.23.5+codexfix.7** 或更新版本。当前已发布包与源码可能不同，请核对 [README 下载区](../README.md#服务端安装包) 和包内 `BUILD-INFO.json`。旧版仍可使用本文的[静态白名单方式](#旧版静态白名单接入)。
 
-## 1. 先分清三端
+## 准备环境
 
-```text
-运行 Herdr/Agent 的电脑                         公网 Linux 服务器
-  Herdr + 会话/项目 ← 本机 Relay ──出站 TCP──→ Gateway :8377
-                                                ↑
-                                  Android App ──┘
-```
+- 电脑：已运行 Herdr，需要 POSIX shell、Python 3.8+、systemd 用户服务。
+- 公网服务器：需要 systemd 和 Python 3；Gateway 不需要安装 Herdr、Codex 或 Android SDK。
+- 使用预编译包不需要 Go、Node 或 Android SDK。ARM64 / macOS 的 CI 独立二进制不包含本文的 Linux 安装模板。
 
-- **Relay 装在运行 Herdr 的电脑上**，使用同一个普通 Linux 用户，读取该用户的 Herdr socket、会话及工作区；不是随便找一台云主机安装就能读本机 Agent。
-- **Gateway 装在有公网地址的服务器上**，转发已加密的数据，不要求安装 Herdr、Codex、Android SDK 或 Go。若 Agent 本身就在云服务器上运行，两者也可在同一台机器，但 Relay 仍应使用 Agent 所属用户。
-- **手机只装 APK**。扫码或粘贴 App 专用邀请，不在手机上运行 Relay/Gateway。
-
-| 端口 | 绑定/方向 | 是否公网开放 |
+| 端口 | 用途 | 公网开放 |
 | --- | --- | --- |
-| Gateway TCP 8377 | 手机和电脑主动连接公网服务器 | **是，唯一业务端口** |
-| Gateway HTTP 18377 | `127.0.0.1`，健康检查及旧 WS 路由 | 否 |
-| Relay HTTP 8375 | 电脑 `127.0.0.1` | 否 |
-| Relay UDP 8376 | 电脑 `127.0.0.1`，Herdr 事件 | 否 |
-| SSH 22 或自定义端口 | 服务器维护 | 按自己的管理策略 |
+| Gateway TCP 8377 | Relay / 客户端接入、加密注册交换 | 是 |
+| Gateway HTTP 18377 | 健康检查 | 否，回环 |
+| Gateway HTTP 18378 | 管理页 | 否，回环 + SSH 转发 |
+| Relay HTTP 8375 | 本机 API | 否，回环 |
+| Relay UDP 8376 | Herdr 事件 | 否，回环 |
+| SSH | 服务器维护与管理页转发 | 按自己的管理策略 |
 
-纯原生模式不需要公开 80/443、UDP 或 STUN；不需要域名或 TLS 证书。**TCP 本身不加密**，应用消息使用设备鉴权和 ECDH/HMAC/AES-GCM E2EE。地址、路由 ID、握手元数据、大小及时序仍可见；不能把此方案当作独立安全审计或运营合规承诺。详见同目录的 `native-tcp.md`（压缩包中为 `NATIVE-TCP.md`）。
+## 下载与校验
 
-## 2. 下载、校验、解压
-
-服务端 Release：**`native-v0.23.5-codexfix.19`**，附件：
-
-- `herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz`
-- `herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz`
-- `SHA256SUMS.txt`
-
-APK 使用配套 Release **`android-v0.2.31`**，普通 ARM64 手机选择 `Herdr-Pocket-0.2.31-release-arm64-v8a.apk`。旧 APK 不支持 codexfix.12 的绑定租约，必须配套更新；已有 Gateway codexfix.6 不变。Android Release 保持为 Latest；服务端版本不等于 Android 版本。
-
-在电脑的空目录中下载（也可直接在 GitHub Releases 页面点附件）。先确认两台 Linux 机器的 `uname -m` 都是 `x86_64`：
+从本仓库 Release 下载所需 Relay / Gateway 归档及同一版本的 `SHA256SUMS.txt`。需要尚未发布的管理功能时，选择 `build-artifacts` 成功运行中的 **`native-bundles-linux_amd64`**，不是 `native-binaries-*`。
 
 ```sh
-set -eu
 mkdir -p "$HOME/Downloads/herdr-native"
 cd "$HOME/Downloads/herdr-native"
-base=https://github.com/cxnaive/herder_relay_extra/releases/download/native-v0.23.5-codexfix.19
-for name in herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz \
-            herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz SHA256SUMS.txt; do
-  curl -fL --retry 4 --connect-timeout 15 --max-time 600 --continue-at - \
-    "$base/$name" -o "$name"
-done
-sha256sum -c SHA256SUMS.txt
-# 只有两个归档都显示 OK 才继续。
-tar -xzf herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64.tar.gz
-tar -xzf herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz
+# 将完整部署包与 SHA256SUMS.txt 放入此目录。
+sha256sum --ignore-missing -c SHA256SUMS.txt
+# 确认待安装文件显示 OK，再解压对应 .tar.gz。
 ```
 
-每包包含二进制、部署模板、本文、许可证、`VERSION.json` 和 `BUILD-INFO.json`。Relay 包还包含原样复制的旧版 `web/`，避免缺失静态资源；原生 Android 界面不使用它。SHA-256 用于完整性核对，请仍从可信的 GitHub Release 获取文件。
+从可信来源下载；校验和只证明文件完整性。每个完整包包含二进制、`BUILD-INFO.json`、配置及 systemd 模板，Relay 包还包含 `web/`。不要单独复制 Relay 二进制而遗漏静态资源。
 
-## 3. 电脑：初始化配置并取得 Relay ID（只限首次）
+## 安装 Gateway
 
-前提：Herdr 已安装、该用户已运行 Herdr；需要 `python3`、POSIX shell 和 systemd 用户服务。预编译包运行不需要 Go/Node/Android SDK。不要用 root 代替自己的 Agent 用户运行电脑 Relay。
+新建管理式 Gateway 的步骤见 [Gateway 首次安装](gateway-management.md#首次安装-gateway)。先安装 Gateway、保存管理员密钥，再在管理页为电脑生成接入码。
 
-**如果已有 Relay，跳到第 7 节。不要生成新主密钥、删除设备库或再启动一个相同端口的 Relay。** 先检查 `systemctl --user status herdr-mobile-relay.service` 和本机端口占用。
+不要把管理端口直接开放到公网。需要不经 SSH 的浏览器入口时，使用 HTTPS 反向代理，并设置精确的 `HERDR_GATEWAY_ADMIN_ORIGIN`；后端仍绑定回环地址。
 
-```sh
-cd "$HOME/Downloads/herdr-native/herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64"
-command -v herdr
-# 203.0.113.10 只是文档保留地址，必须换成你的公网 IP。
-python3 ./init-config.py --gateway tcp://203.0.113.10:8377
-```
+## 安装电脑 Relay
 
-脚本新建 `~/.config/herdr-mobile-relay/relay.env`（目录 0700、文件 0600），生成一个新的 32 字符 Relay 主密钥，仅打印 **22 字符的公开 Relay ID**；已有配置会拒绝覆盖。默认使用 `command -v herdr` 的绝对路径和 `~/.config/herdr/herdr.sock`。
+以下只适用于**首次安装**。已有服务请直接看[升级](#升级已有安装)，不要覆盖其配置或重新初始化身份。
 
-如 Herdr 安装位置或 socket 不同，加 `--herdr-bin /绝对路径/herdr --socket /绝对路径/herdr.sock`。使用自定义 `XDG_CONFIG_HOME`/`--config` 时，第 5 节的 systemd 环境和手动命令也要使用相同配置路径。不要猜另一个用户的 socket。
+### 1. 固定安装目录
 
-此时注册秘密仍是占位值，**还不能启动 Relay**。记下输出的 Relay ID，用于下一步白名单。Relay 主密钥不需要、也不应该复制到 Gateway。
-
-## 4. 公网服务器：安装 Gateway
-
-将校验过的 Gateway 归档和 `SHA256SUMS.txt` 传到服务器。例如在电脑执行：
-
-```sh
-cd "$HOME/Downloads/herdr-native"
-scp herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz SHA256SUMS.txt root@203.0.113.10:/root/
-```
-
-服务器需具备 systemd、GNU coreutils、tar 和 useradd（例如常规 Ubuntu/Debian 服务器）。在服务器的 SSH 会话中执行以下命令。示例使用 root 安装 systemd 服务，但进程会降为独立的 `herdr-tcp` 用户：
+在解压后的 Relay 包内执行。`name` 来自实际目录名；保留包的全部内容：
 
 ```sh
 set -eu
-cd /root
-# 这里只校验本机拥有的 Gateway 归档，不忽略其他校验错误。
-grep '  herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz$' SHA256SUMS.txt | sha256sum -c -
-tar -xzf herdr-gateway_0.23.5-codexfix.6_linux_amd64.tar.gz
-cd herdr-gateway_0.23.5-codexfix.6_linux_amd64
-HERDR_GATEWAY_ALLOWED_RELAY_IDS='填上一步的22字符RelayID' sh ./install.sh
-systemctl status herdr-tcp-gateway.service --no-pager
-curl -fsS http://127.0.0.1:18377/healthz
-```
-
-安装器创建：
-
-- `/opt/herdr-tcp-gateway/releases/0.23.5-codexfix.6/herdr-gateway` 和 `current` 链接。
-- `/etc/herdr-tcp-gateway/relay.env`（root 专用 0600），自动生成随机注册秘密。
-- `/var/lib/herdr-tcp-gateway/`（网关用户专用状态目录）。
-- `herdr-tcp-gateway.service`，启用并重启**此 Gateway 服务**，不会改动 Herdr/Agent。
-
-首次安装必须提供白名单；升级时保留已有环境文件。以后增加电脑要编辑环境文件中的 `HERDR_GATEWAY_ALLOWED_RELAY_IDS`（多个 22 字符 ID 用逗号分隔）并检查 `HERDR_GATEWAY_MAX_RELAYS`，然后重启 Gateway。默认最多 2 台电脑、8 个客户端，每月流量不设上限。
-
-**云安全组与系统防火墙放行 8377/TCP**；安装器不会自动修改防火墙。UFW 已启用时可 `ufw allow 8377/tcp`，不要为了此指南开启/重置防火墙或破坏 SSH 规则。18377 和 8375 不要映射到公网。
-
-## 5. 电脑：安全传入注册秘密并启动 Relay
-
-Gateway 和电脑需要相同的 **注册秘密**，它不同于电脑的 Relay 主密钥，也不同于手机设备凭据。通过可信 SSH 私下传递，不要贴到聊天、命令参数、截图或 Git。
-
-以下命令仅把所需配置行写入私有临时文件，不把秘密打印到终端。替换 SSH 地址；仍使用运行 Herdr 的普通用户：
-
-```sh
-set -eu
-umask 077
-runtime="$HOME/.config/herdr-mobile-relay"
-ssh root@203.0.113.10 "grep '^HERDR_GATEWAY_REGISTRATION_TOKEN=' /etc/herdr-tcp-gateway/relay.env" \
-  > "$runtime/gateway-registration.tmp"
-python3 - "$runtime" <<'PY'
-from pathlib import Path
-import re, sys
-root = Path(sys.argv[1])
-transfer = root / 'gateway-registration.tmp'
-try:
-    line = transfer.read_text().strip()
-    if not re.fullmatch(r'HERDR_GATEWAY_REGISTRATION_TOKEN=[0-9a-f]{64}', line):
-        raise SystemExit('Missing or invalid Gateway registration secret')
-    path = root / 'relay.env'
-    text = path.read_text()
-    placeholder = 'HERDR_GATEWAY_REGISTRATION_TOKEN=REPLACE_WITH_GATEWAY_REGISTRATION_SECRET'
-    if text.count(placeholder) != 1:
-        raise SystemExit('Config already configured or not initialized; preserve it and use the upgrade guide')
-    path.write_text(text.replace(placeholder, line))
-    path.chmod(0o600)
-finally:
-    transfer.unlink(missing_ok=True)
-PY
-```
-
-安装到用户目录，不把配置或设备库放在可替换的二进制目录内：
-
-```sh
-set -eu
+name=$(basename "$PWD")
 base="$HOME/.local/share/herdr-pocket-relay"
-release=herdr-mobile-relay_0.23.5-codexfix.19_linux_amd64
-mkdir -p "$base/releases" "$HOME/.config/systemd/user"
-# 若目标已存在，先检查，不要嵌套覆盖另一次安装。
-test ! -e "$base/releases/$release"
-cp -a "$HOME/Downloads/herdr-native/$release" "$base/releases/$release"
-ln -sfn "releases/$release" "$base/current.new"
-mv -Tf "$base/current.new" "$base/current"
-# 此步骤仅适用于没有既有同名服务的首次部署。
-install -m 0644 "$base/current/herdr-mobile-relay.service" "$HOME/.config/systemd/user/herdr-mobile-relay.service"
+test -f ./herdr-mobile-relay && test -f ./run.sh && test -d ./web
+test ! -e "$base/current" && test ! -L "$base/current"
+mkdir -p "$base/releases"
+test ! -e "$base/releases/$name"
+cp -a "$PWD" "$base/releases/$name"
+ln -s "releases/$name" "$base/current"
+```
+
+### 2. 初始化配置并接入
+
+`PUBLIC_HOST` 替换为 Gateway 的公网地址。Herdr 不在 PATH 或使用非默认 socket 时，向初始化工具传入 `--herdr-bin /绝对路径/herdr`、`--socket /绝对路径/herdr.sock`。
+
+```sh
+base="$HOME/.local/share/herdr-pocket-relay"
+python3 "$base/current/init-config.py" --gateway tcp://PUBLIC_HOST:8377
+"$base/current/run.sh" gateway-join
+# 按提示粘贴管理页生成的 herdr-gateway:// 接入码。
+```
+
+初始化工具仅创建不存在的配置，生成 Relay 主密钥，输出**公开 Relay ID**。默认私有目录 `~/.config/herdr-mobile-relay/` 权限为 0700，配置文件为 0600。
+
+`gateway-join` 保存独立 Gateway 凭据，不更换已有 Relay 身份。初始化配置中旧注册密钥占位符可保留；成功接入后使用 `gateway-access.json` 中的凭据。
+
+### 3. 启动用户服务
+
+```sh
+mkdir -p "$HOME/.config/systemd/user"
+# 首次安装；已有自定义 service 不要覆盖。
+test ! -e "$HOME/.config/systemd/user/herdr-mobile-relay.service"
+cp "$HOME/.local/share/herdr-pocket-relay/current/herdr-mobile-relay.service" \
+  "$HOME/.config/systemd/user/"
 systemctl --user daemon-reload
 systemctl --user enable --now herdr-mobile-relay.service
-systemctl --user status herdr-mobile-relay.service --no-pager
 curl -fsS http://127.0.0.1:8375/healthz
 ```
 
-健康响应应显示 Relay `version=0.23.5+codexfix.12`，`gateway.registered=true`，网关版本 `0.23.5+codexfix.6`。`inventory.state=ready` 才表示成功读取 Herdr；只有 HTTP 200 不代表 Agent 清单可用。原生 App 不依赖网页 bundle 的版本号。
+需要退出登录后继续运行时，可按系统管理策略启用该用户的 lingering：`loginctl enable-linger "$USER"`，可能需要管理员权限。不要因此把 Relay 改成 root 服务。
 
-用户服务若需退出 SSH/登录后继续运行，可由管理员执行 `sudo loginctl enable-linger "$USER"`；这只保留用户服务管理器，**不会自动启动 Herdr 或恢复 Agent**。电脑必须保持在线、不休眠，Herdr 本身也必须运行。
-
-## 6. 手机配对与使用
-
-覆盖安装同签名 APK，保留已有配对/草稿。首次添加这台电脑时，在电脑的私密终端运行：
+### 4. 配对手机或桌面
 
 ```sh
-"$HOME/.local/share/herdr-pocket-relay/current/run.sh" tcp-pair '我的手机'
+~/.local/share/herdr-pocket-relay/current/run.sh tcp-pair '我的手机'
 ```
 
-命令联系**正在运行的同一 Relay** 的私有 Unix socket，生成有效期 10 分钟的单设备邀请，不用第二个进程打开活跃的设备库。App 中扫码或粘贴 `herdr-tcp://公网IP:8377/#…`；它不是网页地址，不要用浏览器打开。
+在客户端“添加电脑”中扫码或粘贴 `herdr-tcp://` 邀请，并设置电脑名称。每个客户端单独生成邀请；不要把主密钥或 Gateway 注册凭据填写到客户端。
 
-二维码和完整邀请含秘密，不能公开。过期后重新生成即可。邀请在手机凭据确认后消耗；同一条邀请不能配多个手机。`herdr-phone` / `herdr-phone-tcp` 不是此包必需或自动提供的命令。
+## 路径与状态
 
-## 7. 已有部署的升级、保留状态与回滚
+| 位置 | 内容 | 升级时 |
+| --- | --- | --- |
+| `~/.local/share/herdr-pocket-relay/releases/` | Relay 版本目录 | 新版本放新目录 |
+| `~/.local/share/herdr-pocket-relay/current` | 使用中的版本链接 | 切换链接 |
+| `~/.config/herdr-mobile-relay/relay.env` | Relay 主密钥、Herdr 路径与设置 | 保留 |
+| 同目录 `gateway-access.json` | 管理式 Gateway 凭据 | 保留且保持私有 |
+| 同目录 `device-auth/` | 客户端授权 | 保留 |
+| `/etc/herdr-tcp-gateway/relay.env` | Gateway 环境配置 | 保留 |
+| `/var/lib/herdr-tcp-gateway/management/` | 电脑清单、凭据、管理密钥摘要、证书与设置 | 完整备份 |
 
-### 电脑 Relay
+已有 Herdr 插件安装的 runtime 可能不在上述默认路径。以服务的 **`HERDR_RELAY_ENV` / `HERDR_PLUGIN_CONFIG_DIR`** 为准；CLI 必须使用同一 runtime，不能只因为路径不同就创建第二套身份。
 
-1. 先检查自己的 `systemctl --user cat herdr-mobile-relay.service`，确认当前可执行文件、`HERDR_RELAY_ENV`/runtime、Herdr 用户及 socket。它可能不是本文首次安装的路径。不要公开配置/日志。
-2. **保留原来的 `HERDR_RELAY_TOKEN`、runtime 目录、`device-auth/` 和手机凭据**。不要运行 `init-config.py`、旋转密钥或复制一份设备库给同时运行的另一个 Relay。切换 TCP 只需更新 Gateway URL、注册秘密、force-relay 设置。
-3. 用私有目录备份环境文件和 systemd 单元；如果要备份设备库，先停止**此 Relay**，再一致复制状态，不能把正在写入的数据库当作普通文件热拷贝。
-4. 新包解压到新的版本目录；停 Relay 后切换二进制/current 或自己的 service override。已有自定义单元不要被模板覆盖，若改动单元则 `systemctl --user daemon-reload`。
-5. `systemctl --user restart herdr-mobile-relay.service` 后检查健康/注册和手机历史。**不重启 Herdr，不停止/重命名 Agent。** 只更新二进制且保持同一 Gateway/密钥/设备库时不需重新配对。
+## 升级已有安装
+
+### Relay
+
+1. 查看 `systemctl --user cat herdr-mobile-relay.service`，确认可执行文件、配置路径和所属用户。
+2. 将新包校验后解压到**新的版本目录**。保留完整包及旧版本，不覆盖正在运行的二进制。
+3. 只停止 Relay：`systemctl --user stop herdr-mobile-relay.service`。此时备份私有配置和设备库，避免复制正在写入的状态。
+4. 将 `current` 切到新目录；已有自定义 service / override 则更新其可执行路径，不要用模板覆盖。
+5. 若改了服务单元，执行 `systemctl --user daemon-reload`，然后 `systemctl --user start herdr-mobile-relay.service`。
+6. 检查版本、注册状态、客户端重连和 Agent 列表。
+
+**不重启 Herdr 或 Agent，不重新运行 `init-config.py`，不删除主密钥或设备库。** 保持身份和授权状态时，客户端无需重新配对。
 
 ### Gateway
 
-备份 `/etc/herdr-tcp-gateway/relay.env`、服务文件、旧可执行文件及 current 指向，再运行新包安装器。已有环境配置会保留，安装会重启该 Gateway，连接会短暂断开后重连。相同版本重装会替换该版本目录中的二进制，因此也要单独备份旧文件。不要让升级脚本或备份把秘密写入公开目录。
+将新包放进 `/opt/herdr-tcp-gateway/releases/` 的新目录。备份配置，停止 Gateway 后一致备份管理状态和配额文件，切换 `current`，再启动 Gateway。连接会短暂中断并重连。
 
-### 回滚
+已有静态白名单 Gateway 第一次启用管理功能时，请先按[迁移说明](gateway-management.md#迁移已有电脑)导入原有电脑。管理状态启用后是权限的权威来源，修改旧环境白名单不会重新授权被禁用／撤销的电脑。
 
-恢复旧二进制/current 或服务 override，必要时恢复旧环境，再 reload/restart **对应 Relay/Gateway**。不要用旧设备库覆盖升级后新配对的状态，否则会丢失授权；不要为了应用更新恢复 Agent 的工作目录。
+不自动回滚。需要人工恢复旧版本时，先确认它支持当前凭据与状态格式；旧版 Gateway / Relay 无法直接使用新管理凭据。不要用过期设备库覆盖新增授权。
 
-这些归档是手动部署包，不是上游 `herdr plugin install/update` 的完整版本包。不要用上游自动更新命令覆盖本地扩展，否则可能丢失 IP/TCP 和会话修复功能。继续从本仓库 Release 更新。
+## 旧版静态白名单接入
 
-## 8. 常见问题
+旧版本没有管理页或 `gateway-join`，但仍能连接客户端：
 
-| 现象 | 先检查 |
-| --- | --- |
-| 下载慢/中途断开 | 上面的 curl 支持断点续传，每次允许 10 分钟；必须以 SHA-256 校验通过为准 |
-| `Exec format error` | `uname -m` 是否为 x86_64；本次不提供 ARM64 包 |
-| Gateway 连不上 | 公网地址/8377、安全组/防火墙，服务器本地 `/healthz` 和 `ss -lnt`；ping 不通不能单独证明 TCP 不通 |
-| `gateway.registered=false` | 两端注册秘密是否一致，公开 Relay ID 是否在白名单，最大 Relay 数和服务日志 |
-| 已注册但 Agent 列表为空 | Relay 是否与 Herdr 同用户，`HERDR_BIN`、`HERDR_SOCKET_PATH`、`inventory.state`；不要仅凭健康 HTTP 200 判断 |
-| `tcp-pair` 找不到 socket | Relay 是否启动、配置路径/runtime 是否一致；不要用 sudo 变成另一个用户 |
-| 端口占用/第二个设备库写入者 | 是否重复启动了旧服务和新包；先确认对应 PID，不要杀掉 Herdr/Agent |
-| 手机后台没提醒 | App 开启常驻监控及通知权限；用“测试完成提醒”，检查音量、通道和省电；服务器在线不代表手机服务一直活着 |
+1. 在电脑运行 `init-config.py --gateway tcp://PUBLIC_HOST:8377`，记下公开 Relay ID。
+2. 在服务器解压 Gateway 包后，运行 `sudo env HERDR_GATEWAY_ALLOWED_RELAY_IDS='公开RelayID' sh ./install.sh`。
+3. 安全地将服务器配置中的 `HERDR_GATEWAY_REGISTRATION_TOKEN` 填入电脑的私有 `relay.env`。不要传给手机或提交 Git。
+4. 按上面的用户服务步骤启动 Relay，再用 `tcp-pair` 配对客户端。
 
-诊断命令（在对应机器本地执行，日志可能含本机信息，不要直接公开）：
+增加电脑需修改 Gateway 的 `HERDR_GATEWAY_ALLOWED_RELAY_IDS`、容量设置并重启 Gateway。新版本建议迁移到独立电脑凭据，无需在多台电脑共享注册秘密。
+
+## 排障
 
 ```sh
-# 公网服务器
-systemctl status herdr-tcp-gateway.service --no-pager
-journalctl -u herdr-tcp-gateway.service -n 40 --no-pager
-curl -fsS http://127.0.0.1:18377/healthz
 # 运行 Herdr 的电脑
 systemctl --user status herdr-mobile-relay.service --no-pager
 journalctl --user -u herdr-mobile-relay.service -n 40 --no-pager
 curl -fsS http://127.0.0.1:8375/healthz
+
+# Gateway 服务器
+systemctl status herdr-tcp-gateway.service --no-pager
+journalctl -u herdr-tcp-gateway.service -n 40 --no-pager
+curl -fsS http://127.0.0.1:18377/healthz
 ```
 
-## 9. 从源码构建与验证范围
+| 现象 | 检查 |
+| --- | --- |
+| `gateway.registered=false` | 地址／防火墙，电脑禁用或撤销状态，容量；旧版再检查共享秘密和白名单 |
+| 注册成功但没有 Agent | Relay 与 Herdr 是否同用户，Herdr 可执行文件、socket、`inventory.state` |
+| `tcp-pair` 找不到运行实例 | 服务是否启动，CLI 与服务的配置路径是否一致 |
+| 历史不能确认或用时未知 | 查看会话绑定诊断；不能据此删除配对或猜选另一个 session |
+| 管理页拒绝访问 | SSH 转发是否使用相同端口；访问地址是否与配置的 Origin 精确一致 |
+| 本地 Gateway 凭据权限错误 | 配置文件必须由 Relay 用户拥有且权限为 0600；不要删文件来绕过错误 |
+| 端口占用 | 检查旧服务／新包是否重复启动；不要误杀 Herdr 或 Agent |
 
-构建要求 Linux amd64、仓库 `go.mod` 指定的 Go 1.27.3、Python 3.8+、Git、GNU tar 和 sha256sum；运行验证脚本还需要 binutils 的 `readelf`。安装/初始化只需要已发布包和系统工具，不需要编译器。
-
-```sh
-# 在干净、已提交的源码根目录，输出目录必须不存在。
-scripts/package-native-release.sh /tmp/herdr-native-release
-python3 scripts/check-native-release.py /tmp/herdr-native-release
-```
-
-构建固定 `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v1`，把完整 commit 注入两个二进制；每包 `BUILD-INFO.json` 记录目标、版本、revision、Go 版本及二进制 SHA-256。包内网页原样复制，不手改或重新生成。
-
-发布前检查完整 Go tests/vet、相关 race tests，以及**解压后的真实二进制**：loopback Gateway 健康、原生 TCP probe、Relay 认证注册、单设备邀请、本地主配置保留和空临时 Herdr 路径隔离。测试不会连接用户的真实 Herdr、Gateway 或手机。
-
-Linux amd64 已做本机运行检查；本次没有 ARM/macOS/Windows 制品，也没有替用户重新部署生产服务。systemd 模板提供参考，未把进程 smoke test 宣称为所有发行版的 systemd/SELinux/云网络验收。
+日志、配对二维码和配置可能包含敏感信息，对外提供前先脱敏。

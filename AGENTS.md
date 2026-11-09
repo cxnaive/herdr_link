@@ -18,7 +18,7 @@ Read `README.md` and `QUICKSTART.md` before changing behavior. `docs/` holds the
 - `android-*` / `native-*` releases use `.github/workflows/publish-components.yml` on `feat/android-file-companion`, not the upstream `v*` plugin lane above.
 - Always reuse a successful trusted `build-artifacts` run. Dispatch a read-only rehearsal first, then explicitly publish the same run ID. Never build, re-sign, download/re-upload release assets through the operator's computer.
 - The CI publisher verifies source, versions, hashes and Android certificate, publishes without overwriting existing assets/tags, and updates README download blocks plus `VERSION.json` from the publication receipt on the existing branch.
-- Preserve the opening 1×4 README gallery. Do not claim a release task is finished while the CI documentation-update step failed. Never work around an upload conflict with `--clobber` or a moved tag.
+- Preserve the system-first README structure and the 1×4 gallery inside the Clients / Android section; do not move the gallery back to the top. Do not claim a release task is finished while the CI documentation-update step failed. Never work around an upload conflict with `--clobber` or a moved tag.
 
 ## Commands
 

@@ -1,12 +1,16 @@
-# 电脑 Relay 部署模板
+# Relay 安装模板
 
-Relay `0.23.5+codexfix.9` 应与 Herdr/Agent 使用同一个普通 Linux 用户。
+Relay 运行在 Herdr / Agent 所属的普通用户下。完整步骤见[部署指南](../../docs/native-deployment.md)，Gateway 接入与迁移见[管理指南](../../docs/gateway-management.md)。
 
-完整下载、Gateway 安装、配置、用户 systemd 服务、配对及升级流程见 [部署指南](../../docs/native-deployment.md)。Release 归档包含已编译的 Relay、这些模板及 `DEPLOYMENT.md`，源码此目录不包含二进制。
+| 文件 / 命令 | 用途 |
+| --- | --- |
+| `init-config.py` | 首次创建私有配置；不覆盖已有身份，需 Python 3.8+ |
+| `run.sh gateway-join` | 使用接入码获得独立 Gateway 注册凭据 |
+| `run.sh serve` | 加载同一配置并运行 Relay |
+| `run.sh tcp-pair '设备名'` | 向运行中的 Relay 申请客户端配对邀请 |
+| `herdr-mobile-relay.service` | 首次安装的 systemd 用户服务模板 |
+| `relay.env.example` | 配置字段示例，不含可用秘密 |
 
-- `init-config.py`：只初始化不存在的私有配置；输出公开 Relay ID，不输出主密钥；需要 Python 3.8+。
-- `run.sh serve` / `run.sh tcp-pair '设备名'`：加载相同私有配置；服务与 CLI 必须使用相同 `HERDR_RELAY_ENV`。
-- `herdr-mobile-relay.service`：首次安装用的 systemd **用户**服务。已有服务应保留自定义配置，不要直接覆盖。
-- `relay.env.example`：字段说明，不包含可直接使用的密钥。
+完整部署包内还提供 `DEPLOYMENT.md`；本源码目录没有编译好的 Relay，不能直接运行服务。
 
-Relay 需要当前用户的项目/会话读写权限；不要为了部署方便改成 root，不要重启 Herdr/Agent，也不要把一个活跃设备数据库交给多个 Relay 进程。
+已有安装请保留主密钥、runtime 和设备库，CLI 使用与服务相同的 `HERDR_RELAY_ENV`。不要覆盖自定义服务，不要以 root 代替 Agent 用户，不要为了升级重启 Herdr / Agent。

@@ -14,28 +14,24 @@ def replace_block(text, key, body):
     return before + start + "\n" + body.rstrip() + "\n" + end + after
 
 
-def android_block(metadata):
+def android_block(metadata, heading="#### 下载 Android APK"):
     release = metadata["android_release"]
     v, tag = release["version"], release["release_tag"]
     base = f"https://github.com/{REPOSITORY}/releases"
     rows = []
-    for label, abi in (("ARM64 手机 / 平板", "arm64-v8a"), ("32 位 ARM", "armeabi-v7a"), ("x86_64 模拟器 / 设备", "x86_64")):
-        rows.append(f"| {label} | [Release · {abi}]({base}/download/{tag}/Herdr-Pocket-{v}-release-{abi}.apk) |")
-    return f'''## 下载 Android APK
+    for label, abi in (("大多数手机 / 平板", "arm64-v8a"), ("32 位 ARM 设备", "armeabi-v7a"), ("x86_64 设备 / 模拟器", "x86_64")):
+        rows.append(f"| {label} | [{abi}]({base}/download/{tag}/Herdr-Pocket-{v}-release-{abi}.apk) |")
+    return f'''{heading}
 
-**[{v} / versionCode {release['version_code']}]({base}/tag/{tag})**。
+**[Herdr Pocket {v}]({base}/tag/{tag})** · Android 9 及以上
 
-| 设备架构 | 下载 |
+| 设备 | APK |
 | --- | --- |
 {chr(10).join(rows)}
 
-附件还包含三种 ABI 的 Debug APK、`BUILD-INFO.json` 和 `SHA256SUMS.txt`。
-所有 APK 直接复用 CI 固定签名产物，不重新编译或签名。**直接覆盖安装，不要卸载旧版**，以保留配对和草稿。
-Android 9 / API 28 及以上；仍使用原有调试证书，不是 Play 商店版本。自行构建的签名可能不同。
-
-发布来源：[CI run {release['release_build_run']}](https://github.com/{REPOSITORY}/actions/runs/{release['release_build_run']})，源码 `{release['release_source_commit']}`。
-构建成功不等于完整 check 或真机验收全绿；验证范围和已知缺口见 Release 说明及 `herdr-android/VALIDATION.md`。
-历史版本和更新内容保留在 Releases / CHANGELOG。'''
+更新时直接覆盖安装，**不要卸载旧版**，以保留配对与草稿。
+发布包沿用固定签名证书；自行构建的 APK 可能无法覆盖安装。
+校验文件、其他构建与版本说明见 Release 页面。'''
 
 
 def native_block(metadata):
@@ -43,21 +39,20 @@ def native_block(metadata):
     base = f"https://github.com/{REPOSITORY}/releases"
     rows = "\n".join(f"- [`{release[field]}`]({base}/download/{release['tag']}/{release[field]})"
                      for field in ("relay_artifact", "gateway_artifact", "checksums"))
-    return f'''## 下载 Relay / Gateway 与部署指南
+    preview = ""
+    for field, component, binary in (("relay_artifact", "relay", "herdr-mobile-relay"), ("gateway_artifact", "native_gateway", "herdr-gateway")):
+        expected = f"{binary}_{metadata[component]['version'].replace('+', '-')}_linux_amd64.tar.gz"
+        if release[field] != expected:
+            preview = f"\n\n当前源码包含尚未发布的更新。需要新功能时，可从 [CI 预览构建](https://github.com/{REPOSITORY}/actions/workflows/build-artifacts.yml) 的成功运行中下载 `native-bundles-linux_amd64`，并核对包内版本；CI 附件有保留期限。"
+            break
+    return f'''### 服务端安装包
 
-**[完整部署指南](docs/native-deployment.md)** · **[{release['tag']}]({base}/tag/{release['tag']})**
-
-Linux x86_64 / amd64 完整部署包：
+已发布的 **[{release['tag']}]({base}/tag/{release['tag']})** · Linux x86_64 完整部署包
 
 {rows}
 
-包含二进制、Relay Web、配置/systemd 模板、初始化工具、部署说明及 BUILD-INFO。
-其他架构的 `native-binaries-*` 仅是 CI 可执行文件，不是完整部署包。
-公网服务器装 Gateway，运行 Herdr/Agent 的电脑装 Relay；已运行同版 Gateway 无需因 Relay 更新而重启。
-升级保留现有配置、密钥和设备库，不重复初始化，不重启 Herdr/Agent；发布流程不部署服务器。
-
-发布来源：[CI run {release['release_build_run']}](https://github.com/{REPOSITORY}/actions/runs/{release['release_build_run']})，源码 `{release['release_source_commit']}`。
-Android 为 Latest；服务端版本和 Android 版本分别编号。'''
+电脑安装 Relay，公网服务器安装 Gateway。安装、配对与保留数据升级见[部署指南](docs/native-deployment.md)。
+ARM64 / macOS 的 CI 产物为独立二进制，不是上述完整部署包。{preview}'''
 
 
 def update_docs(root, plan, receipt):
@@ -103,7 +98,7 @@ def update_docs(root, plan, receipt):
         readme = re.sub(pattern, lambda m: m[1] + metadata[field]["version"] + m[2], readme)
     changes[root / "README.md"] = readme
     child = root / "herdr-android/README.md"
-    changes[child] = replace_block(child.read_text(), "android-downloads", android_block(metadata).replace("## 下载 Android APK", "## 安装", 1))
+    changes[child] = replace_block(child.read_text(), "android-downloads", android_block(metadata, heading="## 安装"))
     guide = root / "docs/native-deployment.md"
     text = guide.read_text()
     for field in ("tag", "relay_artifact", "gateway_artifact"):

@@ -1,10 +1,11 @@
-# 公网 Gateway 部署模板
+# Gateway 安装模板
 
-Gateway `0.23.5+codexfix.6`，配套电脑 Relay `0.23.5+codexfix.9` 和 Android `0.2.15`。
+Gateway 部署在公网服务器，只转发加密应用数据，不需要安装 Herdr 或 Agent。
 
-- 从零安装、下载校验、电脑 Relay 配置、systemd、配对、升级/回滚：见 [完整部署指南](../../docs/native-deployment.md)。
-- 原生 TCP 协议及 E2EE 边界：见 [native-tcp.md](../../docs/native-tcp.md)。
-- `install.sh` 必须从**已解压的 Gateway Release 包**运行；源码此目录没有二进制，不能直接运行安装。
-- 安装器以 root 安装，但服务使用非登录用户 `herdr-tcp`；首次要求 `HERDR_GATEWAY_ALLOWED_RELAY_IDS`，随机生成注册秘密；重装保留既有环境并重启此 Gateway。
-- 公网仅开放 8377/TCP；健康 HTTP 18377 仅 loopback；脚本不会修改云安全组/防火墙。
-- 这是手动部署的本地扩展，不是上游插件自动升级格式。源码根目录 `scripts/package-native-release.sh` 可生成完整归档。
+- **新管理式安装**：按[Gateway 管理指南](../../docs/gateway-management.md)初始化私有状态，使用限时接入码授权各台电脑。
+- **旧版静态白名单安装**：`install.sh` 从解压后的 Gateway 部署包运行，首次要求 `HERDR_GATEWAY_ALLOWED_RELAY_IDS`，生成共享注册秘密。它不会自动启用管理页；需要 Python 3 来核对包内版本和二进制校验和，同版本但不同二进制会拒绝覆盖。
+- **升级**：保留原环境与私有状态，见[安装与升级](../../docs/native-deployment.md)。
+
+源码此目录不含二进制。安装时可使用 root，但服务由专用非登录用户 `herdr-tcp` 运行。公网开放 TCP 8377，健康接口与管理页保持回环监听；模板不会修改云安全组。
+
+`relay.env.example` 提供配置字段，`herdr-tcp-gateway.service` 提供 systemd 模板。不要把实际配置、管理密钥或电脑注册凭据提交到仓库。

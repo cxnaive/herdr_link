@@ -60,12 +60,13 @@ def main():
     except FileExistsError:
         parser.error("config already exists; preserve its key/device store and follow the upgrade guide")
     with os.fdopen(fd, "w") as output:
-        output.write("# Private shell config. Fill the gateway registration secret before starting.\n")
+        output.write("# Private shell config. Complete gateway-join, or set the legacy registration secret before starting.\n")
         for name, value in values.items():
             output.write(f"{name}={shlex.quote(value)}\n")
     print(f"Created private config: {path}")
     print(f"Public relay ID: {relay_id(key)}")
-    print("Install the Gateway with this ID, then fill its registration secret in this config.")
+    print("For a managed Gateway, run the installed run.sh gateway-join with its access code.")
+    print("For a legacy Gateway, allow this Relay ID and fill its registration secret in this config.")
     print("The relay master key was NOT printed; never send it to the Gateway or phone.")
 
 
