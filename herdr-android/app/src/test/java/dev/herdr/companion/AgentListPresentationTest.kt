@@ -14,6 +14,47 @@ class AgentListPresentationTest {
     private val relays get() = JSONArray().put(JSONObject().put("id", "z").put("label", "训练机 A"))
         .put(JSONObject().put("id", "a").put("label", "训练机 B"))
 
+    @Test fun activityCountsRunningWaitingAndUnconfirmedWithoutCountingTerminals() {
+        val rows = listOf(
+            agent("working").put("status", "working"),
+            agent("busy").put("status", " BUSY "),
+            agent("blocked").put("status", "blocked"),
+            agent("waiting").put("status", "needs_input"),
+            agent("idle").put("status", "idle"),
+            agent("finished").put("status", "done"),
+            agent("unknown").put("status", "unknown"),
+            agent("unbound").put("agent", "codex").put("status", "working").put("binding_state", "ambiguous"),
+            agent("shell").put("terminal_only", true).put("status", "working")
+        )
+        val counts = AgentListPresentation.activity(rows)
+        assertEquals(AgentListPresentation.Activity(8, 1, 2, 2, 2), counts)
+        assertEquals("运行中 2 · 待处理 2 · 待确认 2", counts.summary(true, true))
+        assertEquals("运行数待确认", counts.summary(false, true))
+        assertEquals("运行数待确认", counts.summary(true, false))
+        assertEquals("运行中 0", AgentListPresentation.activity(emptyList()).summary(true, true))
+    }
+    @Test fun eachComputerUsesAllItsServersAndNotOnlySearchMatches() {
+        val inventory = mapOf("z" to JSONArray().put(agent("writer").put("status", "working"))
+            .put(agent("hidden", server = "secondary").put("status", "working"))
+            .put(agent("shell").put("terminal_only", true).put("status", "working")),
+            "a" to JSONArray().put(agent("other").put("status", "blocked")))
+        val all = AgentListPresentation.computers(relays, inventory, emptyMap(), "")
+        assertEquals(2, all[0].activity.running); assertEquals(0, all[1].activity.running)
+        assertEquals(1, all[1].activity.waiting)
+        val match = AgentListPresentation.computers(relays, inventory, emptyMap(), "writer").single()
+        assertEquals(2, match.totalAgents); assertEquals(1, match.matchingAgents)
+        assertEquals(2, match.activity.running); assertEquals(1, match.activity.terminals)
+        val shell = AgentListPresentation.computers(relays, inventory, emptyMap(), "shell").single()
+        assertEquals(0, shell.matchingAgents); assertEquals(1, shell.matchingTerminals)
+    }
+    @Test fun idleAndEndedStatesAreNeverRunningAndOtherProvidersKeepHerdrStatus() {
+        for (status in listOf("idle", "ready", "done", "completed", "finished", "interrupted", "failed", "error", "stopped", "exited", "ended")) {
+            assertEquals(AgentListPresentation.Activity(1, 0, 0, 0, 0), AgentListPresentation.activity(listOf(agent(status).put("status", status))))
+        }
+        val other = agent("other").put("agent", "claude").put("status", "running").put("binding_state", "ambiguous")
+        assertEquals(1, AgentListPresentation.activity(listOf(other)).running)
+    }
+
     @Test fun pairedComputerOrderIsStableAndSameWorkspacesStaySeparate() {
         val inventory = mapOf("z" to JSONArray().put(agent("second", 2)).put(agent("first", 1)), "a" to JSONArray().put(agent("first")))
         val result = AgentListPresentation.computers(relays, inventory, emptyMap(), "")

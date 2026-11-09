@@ -248,10 +248,13 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
             val key = AgentGroupExpansion.computerKey(computer.id)
             val expanded = groupExpansion.expanded(key, search)
             val status = if (computer.id in online) "已连接" else "未连接"
-            val counts = if (searching) "匹配 ${computer.workspaces.size}/${computer.totalWorkspaces} 个工作空间 · ${computer.matchingAgents}/${computer.totalAgents} 个 Agent"
-                else "${computer.totalWorkspaces} 个工作空间 · ${computer.totalAgents} 个 Agent"
+            val counts = (if (searching) "匹配 ${computer.workspaces.size}/${computer.totalWorkspaces} 个工作空间 · ${computer.matchingAgents}/${computer.totalAgents} 个 Agent"
+                else "${computer.totalWorkspaces} 个工作空间 · ${computer.totalAgents} 个 Agent") +
+                if (computer.activity.terminals > 0) " · " + (if (searching) "${computer.matchingTerminals}/" else "") + "${computer.activity.terminals} 个终端" else ""
+            val inventoryStatus = configs[computer.id]?.optJSONObject("inventory")
+            val activity = computer.activity.summary(computer.id in online, inventoryStatus?.optString("state") == "ready" && !inventoryStatus.optBoolean("stale"))
             val section = column(0)
-            section.addView(AgentGroupHeader(context, key, computer.label, "$status · $counts", expanded, true) { toggleListGroup(rows, it) })
+            section.addView(AgentGroupHeader(context, key, computer.label, "$status · $activity\n$counts", expanded, true) { toggleListGroup(rows, it) })
             if (expanded) {
                 val children = column(0).apply { setPadding(dp(12), dp(6), 0, 0) }
                 for (workspace in computer.workspaces) children.addView(workspaceSection(rows, workspace), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })

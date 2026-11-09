@@ -6,6 +6,7 @@ project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Show per-computer running and waiting Agent counts in Android and Windows/Linux desktop groups, independent of search and collapse. Exclude terminal-only panels and mark offline or unconfirmed state instead of presenting stale running counts.
 - Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.
 
 ### Changed

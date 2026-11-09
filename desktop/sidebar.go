@@ -123,6 +123,7 @@ func (a *application) sidebarView(c *ui.Context) {
 		query := strings.ToLower(strings.TrimSpace(a.query))
 		ui.Scroll(c).Grow(1).Gap(12).Children(func() {
 			for _, m := range a.machines {
+				activity := relay.CountAgentActivity(m.agents)
 				groups := machineGroups(m)
 				visible := []agentGroup{}
 				for _, g := range groups {
@@ -145,7 +146,7 @@ func (a *application) sidebarView(c *ui.Context) {
 				key := groupKey("computer", m.config.ID)
 				collapsed := a.collapsed[key] && query == ""
 				ui.Column(mc).Gap(3).Children(func() {
-					if disclosure(mc, m.config.Name, collapsed, len(m.agents)) && query == "" {
+					if disclosure(mc, m.config.Name, collapsed, activity.Agents) && query == "" {
 						a.toggleGroup(key)
 						collapsed = a.collapsed[key]
 					}
@@ -159,6 +160,11 @@ func (a *application) sidebarView(c *ui.Context) {
 							a.connect(m)
 						}
 					})
+					summary := activity.Summary(m.session != nil || a.demo, m.inventoryReady || a.demo)
+					if activity.Terminals > 0 {
+						summary += " · " + fmtCount(activity.Terminals) + " 个终端"
+					}
+					ui.Text(mc, summary).FontSize(11).TextColor(t.TextMuted).Wrap().Padding(0, 4, 0, 19)
 					if collapsed {
 						return
 					}

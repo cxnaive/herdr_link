@@ -32,7 +32,7 @@ internal class AgentGroupHeader(context: Context, val groupKey: String, title: S
             ellipsize = if (lines == 1) TextUtils.TruncateAt.MIDDLE else TextUtils.TruncateAt.END
         }
         text.addView(label(title, if (computer) 20f else 18f, AgentStyle.ink).apply { typeface = AgentStyle.medium })
-        text.addView(label(summary, 12f, AgentStyle.muted).apply { setPadding(0, AgentStyle.dp(context, 3), 0, 0) })
+        text.addView(label(summary, 12f, AgentStyle.muted, if (computer) 4 else 2).apply { setPadding(0, AgentStyle.dp(context, 3), 0, 0) })
         if (!path.isNullOrBlank()) text.addView(label(path, 12f, AgentStyle.muted, 1))
         addView(text, LayoutParams(0, -2, 1f))
         setOnClickListener { action(this) }

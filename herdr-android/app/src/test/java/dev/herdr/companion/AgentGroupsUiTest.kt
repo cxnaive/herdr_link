@@ -112,6 +112,31 @@ class AgentGroupsUiTest {
         }
     }
 
+    @Test fun runningCountsStayVisibleWhileFoldedAndUpdateWithoutSearchBias() = Fixture().use { f ->
+        f.inventory["a"]!!.put(agent("waiting").put("status", "blocked"))
+            .put(agent("shell").put("terminal_only", true))
+        f.message("a", JSONObject().put("type", "agents")); f.layout()
+        fun summary() = f.header(computer("a")).contentDescription.toString()
+        assertTrue(summary().contains("运行中 2 · 待处理 1"))
+        assertTrue(summary().contains("3 个 Agent · 1 个终端"))
+        f.toggle(computer("a")); assertTrue(summary().contains("运行中 2"))
+        f.search("writer"); assertTrue(summary().contains("运行中 2"))
+        assertTrue(summary().contains("1/3 个 Agent"))
+        f.search("")
+        f.inventory["a"]!!.getJSONObject(0).put("status", "done")
+        f.message("a", JSONObject().put("type", "agent_update")); f.layout()
+        assertFalse(f.header(computer("a")).expanded)
+        assertTrue(summary().contains("运行中 1 · 待处理 1"))
+        f.capture("running-counts")
+        f.status("a", false); f.layout()
+        assertTrue(summary().contains("运行数待确认")); assertFalse(summary().contains("运行中 1"))
+        f.status("a", true)
+        f.message("a", JSONObject().put("type", "inventory_status").put("state", "error").put("stale", true)); f.layout()
+        assertTrue(summary().contains("运行数待确认"))
+        f.message("a", JSONObject().put("type", "inventory_status").put("state", "ready")); f.layout()
+        assertTrue(summary().contains("运行中 1"))
+    }
+
     @Test fun computersAndWorkspacesCollapseIndependentlyAndRestoreAfterRecreation() = Fixture().use { f ->
         assertEquals(2, f.tabs())
         f.toggle(workspace("a")); assertEquals(1, f.tabs())

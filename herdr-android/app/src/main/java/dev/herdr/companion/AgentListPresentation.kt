@@ -6,8 +6,37 @@ import org.json.JSONObject
 internal object AgentListPresentation {
     data class Workspace(val group: AgentPresentation.Group, val agents: List<JSONObject>)
     data class Computer(val id: String, val label: String, val workspaces: List<Workspace>,
-        val totalWorkspaces: Int, val totalAgents: Int) {
-        val matchingAgents get() = workspaces.sumOf { it.agents.size }
+        val totalWorkspaces: Int, val activity: Activity) {
+        val totalAgents get() = activity.agents
+        val matchingAgents get() = workspaces.sumOf { it.agents.count { agent -> !AgentPresentation.terminalOnly(agent) } }
+        val matchingTerminals get() = workspaces.sumOf { it.agents.count(AgentPresentation::terminalOnly) }
+    }
+
+    data class Activity(val agents: Int, val terminals: Int, val running: Int, val waiting: Int, val unknown: Int) {
+        fun summary(online: Boolean, ready: Boolean): String {
+            if (!online || !ready) return "运行数待确认"
+            return "运行中 $running" + (if (waiting > 0) " · 待处理 $waiting" else "") +
+                (if (unknown > 0) " · 待确认 $unknown" else "")
+        }
+    }
+
+    // Count the full Relay inventory, never the search result or terminal output.
+    fun activity(rows: List<JSONObject>): Activity {
+        var agents = 0; var terminals = 0; var running = 0; var waiting = 0; var unknown = 0
+        for (agent in rows) {
+            if (AgentPresentation.terminalOnly(agent)) { terminals++; continue }
+            agents++
+            if (agent.optString("agent") == "codex" && agent.optString("binding_state") !in setOf("", "verified")) {
+                unknown++; continue
+            }
+            when (agent.optString("status").trim().lowercase()) {
+                "working", "running", "busy" -> running++
+                "blocked", "waiting", "needs_input" -> waiting++
+                "idle", "ready", "done", "completed", "finished", "interrupted", "failed", "error", "stopped", "exited", "ended" -> Unit
+                else -> unknown++
+            }
+        }
+        return Activity(agents, terminals, running, waiting, unknown)
     }
 
     fun computers(relays: JSONArray, inventory: Map<String, JSONArray>, workspaces: Map<String, JSONArray>, search: String): List<Computer> {
@@ -30,7 +59,7 @@ internal object AgentListPresentation {
                 if (workspaceMatches || agents.isNotEmpty()) Workspace(group, agents) else null
             }
             if (query.isNotEmpty() && !deviceMatches && visible.isEmpty()) null
-            else Computer(id, label, visible, all.size, all.sumOf { it.agents.size })
+            else Computer(id, label, visible, all.size, activity(all.flatMap { it.agents }))
         }
     }
 }
