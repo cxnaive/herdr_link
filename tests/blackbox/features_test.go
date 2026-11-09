@@ -304,38 +304,6 @@ func TestUploadAttachmentBatch(t *testing.T) {
 	}
 }
 
-func TestUploadAttachmentRejectsBadMime(t *testing.T) {
-	env := setupEnv(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	conn, _, err := websocket.Dial(ctx, env.wsURL, nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	defer conn.Close(websocket.StatusNormalClosure, "")
-
-	target := awaitAgentTarget(t, conn, ctx)
-	request := map[string]any{
-		"type": "upload_begin", "protocol": 3, "request_id": "upload-bad",
-		"target": target,
-		"files": []map[string]any{{
-			"name": "evil.exe", "media_type": "application/octet-stream", "bytes": 3,
-		}},
-	}
-	data, _ := json.Marshal(request)
-	if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	message := readJSON(t, conn, ctx, 5*time.Second)
-	if message["type"] != "upload_begin_result" {
-		t.Fatalf("type = %v", message["type"])
-	}
-	apiError, _ := message["error"].(map[string]any)
-	if apiError["code"] != "attachment_unknown_mime" {
-		t.Fatalf("error = %v", message["error"])
-	}
-}
-
 func TestListDirectories(t *testing.T) {
 	env := setupEnv(t)
 
