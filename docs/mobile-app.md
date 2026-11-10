@@ -4,6 +4,10 @@ What the phone app does once a relay is connected: the agent list, read-only
 workspace inspection, and the mobile terminal. Read this if you have finished
 setup and want to know what every screen and control is for.
 
+## Pi / OMP version boundary
+
+Pi 1.5.2 and OMP 18.18.6 use version-specific dialog controls. Current Pi select/confirm/input, OMP approval/Ask, and HTML form field operations are checked against published upstream components and original CLI fixtures; see [current upstream verification](pi-omp-current-support.md). HTML forms remain native and use explicit field operations and a separate final Submit, not a reconstructed browser form. Unknown layouts, changed keybindings and private inputs stay terminal-only. Ordinary Android prompt routing is separate from structured approval/question support.
+
 ## What it does
 
 - Monitor and control agents across several computers, with new, closed, and

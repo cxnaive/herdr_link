@@ -39,16 +39,19 @@ type Focus struct {
 }
 
 type Interaction struct {
-	ID            string   `json:"id"`
-	Kind          string   `json:"kind"`
-	Question      string   `json:"question"`
-	Options       []Option `json:"options"`
-	Other         Other    `json:"other"`
-	SubmitLabel   string   `json:"submit_label"`
-	CanChat       bool     `json:"can_chat"`
-	CanGoBack     bool     `json:"can_go_back"`
-	QuestionIndex int      `json:"question_index,omitempty"`
-	QuestionTotal int      `json:"question_total,omitempty"`
+	Stepwise      bool       `json:"stepwise,omitempty"`
+	InputMode     string     `json:"-"`
+	ActionKeys    [][]string `json:"-"`
+	ID            string     `json:"id"`
+	Kind          string     `json:"kind"`
+	Question      string     `json:"question"`
+	Options       []Option   `json:"options"`
+	Other         Other      `json:"other"`
+	SubmitLabel   string     `json:"submit_label"`
+	CanChat       bool       `json:"can_chat"`
+	CanGoBack     bool       `json:"can_go_back"`
+	QuestionIndex int        `json:"question_index,omitempty"`
+	QuestionTotal int        `json:"question_total,omitempty"`
 
 	Focus          Focus  `json:"-"`
 	AllOptionCount int    `json:"-"`
@@ -119,6 +122,9 @@ func ompAskAgent(agent string) bool {
 }
 
 func Parse(text, agent string) *Interaction {
+	if interaction, recognized := currentInteraction(text, agent); recognized {
+		return interaction
+	}
 	if !LayoutHint(text) {
 		return nil
 	}

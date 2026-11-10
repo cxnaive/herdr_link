@@ -1,0 +1,28 @@
+{
+  "stepwise": true,
+  "id": "2daefd6314f1c80872e7a70f",
+  "kind": "single_select",
+  "question": "╭─ Allow tool: bash ───────────────────────────────────────────────────────────╮\nCommand: echo synthetic",
+  "options": [
+    {
+      "index": 0,
+      "label": "Approve",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 1,
+      "label": "Deny",
+      "description": "",
+      "selected": false
+    }
+  ],
+  "other": {
+    "selected": false,
+    "text": "",
+    "hidden": true
+  },
+  "submit_label": "确认所选审批操作",
+  "can_chat": false,
+  "can_go_back": false
+}

@@ -498,7 +498,6 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
     private fun request(type: String, payload: JSONObject = JSONObject(), timeout: Long = 20000, trackAfterNavigation: Boolean = false, callback: (JSONObject?, String?) -> Unit) {
         val agent = current() ?: run { callback(null, "Agent 会话已变化"); return }
         val command = AgentProtocol.command(relay, agent, type)
-        if (type in listOf("get_pi_prompt_capability", "send_pi_prompt_unconfirmed")) command.remove("cwd")
         payload.keys().forEach { command.put(it, payload.get(it)) }
         FileReadScope.apply(command, unrestrictedFiles(relay))
         val target = WorkspaceBinding.fromAgent(relay, agent)
@@ -820,6 +819,10 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
         container.addView(HorizontalScrollView(context).apply { addView(actions) })
     }
     private fun answerQuestion(captured: JSONObject) {
+        val target = current()?.let { WorkspaceBinding.fromAgent(relay, it) } ?: return
+        val ownerEpoch = epoch
+        val stillCurrent = { ownerEpoch == epoch && current()?.let { WorkspaceBinding.fromAgent(relay, it) } == target }
+        val stepwise = captured.optBoolean("stepwise")
         val form = column(12); form.addView(label(captured.optString("question"), 16, textInk))
         val options = captured.optJSONArray("options") ?: JSONArray(); val checked = mutableSetOf<Int>(); val buttons = mutableListOf<CheckBox>()
         for (i in 0 until options.length()) {
@@ -830,12 +833,23 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
         }
         val other = captured.optJSONObject("other")
         val otherEnabled = CheckBox(context).apply { text = other?.optString("label").orEmpty().ifBlank { "其他" }; setTextColor(textInk) }
+        otherEnabled.setOnCheckedChangeListener { _, enabled ->
+            if (enabled && captured.optString("kind") == "single_select") { checked.clear(); buttons.forEach { it.isChecked = false } }
+        }
+        if (captured.optString("kind") == "single_select") buttons.forEach { box -> box.setOnCheckedChangeListener { _, enabled ->
+            if (enabled) { checked.clear(); buttons.filter { it !== box }.forEach { it.isChecked = false }; otherEnabled.isChecked = false }
+            val index = options.getJSONObject(buttons.indexOf(box)).optInt("index", buttons.indexOf(box))
+            if (enabled) checked += index else checked -= index
+        } }
         val text = EditText(context).apply { hint = other?.optString("placeholder"); setTextColor(textInk) }
         if (other != null && !other.optBoolean("hidden")) { form.addView(otherEnabled); form.addView(text) }
-        val dialog = AlertDialog.Builder(context).setTitle("回答 Agent").setView(ScrollView(context).apply { addView(form) }).setPositiveButton(captured.optString("submit_label", "提交"), null).setNegativeButton("取消", null)
-        if (captured.optBoolean("can_go_back")) dialog.setNeutralButton("上一题") { _, _ -> questionAction("navigate_question", captured, JSONObject().put("direction", "previous")) }
+        val dialog = AlertDialog.Builder(context).setTitle(if (stepwise) "操作当前交互" else "回答 Agent").setView(ScrollView(context).apply { addView(form) }).setPositiveButton(captured.optString("submit_label", "提交"), null).setNegativeButton("取消", null)
+        if (captured.optBoolean("can_go_back")) dialog.setNeutralButton("上一题") { _, _ ->
+            if (stillCurrent()) questionAction("navigate_question", captured, JSONObject().put("direction", "previous")) else toast("会话已变化，请重新打开当前问题")
+        }
         val shown = dialog.create(); shown.setOnShowListener { shown.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            if (checked.isEmpty() && !otherEnabled.isChecked) { toast("请选择答案"); return@setOnClickListener }
+            if (!stillCurrent()) { toast("会话已变化，请重新打开当前问题"); shown.dismiss(); return@setOnClickListener }
+            if (checked.isEmpty() && !otherEnabled.isChecked && !(stepwise && captured.optString("kind") == "multi_select")) { toast("请选择答案"); return@setOnClickListener }
             if (otherEnabled.isChecked && text.text.isBlank() && other?.optBoolean("allow_empty") != true) { toast("请填写其他答案"); return@setOnClickListener }
             questionAction("answer_question", captured, JSONObject().put("selected_indices", JSONArray(checked.sorted())).put("other_selected", otherEnabled.isChecked).put("other_text", if (otherEnabled.isChecked) text.text.toString() else "")); shown.dismiss()
         } }; shown.show()
@@ -852,17 +866,8 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
             mutate("send_terminal_text", JSONObject().put("text", text), true)
         } else {
             if (current()?.optString("status") == "blocked") { toast("请先回答审批或问题，或在终端使用手动输入"); return }
-            if (selected?.optString("agent") in listOf("pi", "omp")) { piPrompt(text); return }
             val attachmentText = (0 until attachments.length()).joinToString("\n") { "Attachment: ${attachments.getJSONObject(it).getString("ref")}" }
             mutate("submit_prompt", JSONObject().put("text", if (attachmentText.isEmpty()) text else "$text\n$attachmentText\n"), true)
-        }
-    }
-    private fun piPrompt(text: String) {
-        request("get_pi_prompt_capability") { data, error ->
-            val lease = data?.optJSONObject("lease")
-            if (error != null || lease == null) { toast(error ?: "Pi 当前未提供输入能力，请在终端输入"); return@request }
-            AlertDialog.Builder(context).setTitle("向 Pi 发送内容").setMessage("此接口只确认输入已投递，不能证明 Pi 已接受。发送后请查看终端。")
-                .setPositiveButton("发送") { _, _ -> mutate("send_pi_prompt_unconfirmed", JSONObject().put("text", text).put("pi_prompt_lease", lease), true) }.setNegativeButton("取消", null).show()
         }
     }
     private fun sendKeys(key: String) {

@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-10",
+  "pi": {
+    "package": "@earendil-works/pi-coding-agent",
+    "version": "1.5.2",
+    "repository": "badlogic/pi-mono",
+    "tag": "v1.5.2",
+    "integrity": "sha512-mUWI04rqF1Vd/m1q+Ps1XeWsTXEVvRUnsmRa83I3Dzua0Tx5bYS93imeqtIfrXf7PkkaR6ERz+AuQhIJlom5yA==",
+    "commit": "b4afdddf44e059c67ccf5097e5317d913521b470"
+  },
+  "omp": {
+    "package": "@oh-my-pi/pi-coding-agent",
+    "version": "18.18.6",
+    "repository": "can1357/oh-my-pi",
+    "tag": "v18.18.6",
+    "integrity": "sha512-Mq/AK/YbOCJMY6VNNZxLx5pFNuPzufcuD4RymXeH6e9U7oap6CzGWfh5x13yHSHkiDFeXxjuPCwYBex1WbEXOA==",
+    "commit": "9058ab9d229663e229e2867824ba6df6f21e9e59"
+  }
+}

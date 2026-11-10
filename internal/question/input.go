@@ -1,6 +1,9 @@
 package question
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // InputIntent is the provider-neutral action requested by the phone.
 type InputIntent struct {
@@ -21,6 +24,10 @@ type InputStep struct {
 // PlanInput translates the shared question protocol into the keyboard contract
 // of the detected terminal form.
 func PlanInput(interaction *Interaction, intent InputIntent) []InputStep {
+	if interaction.Stepwise {
+		return planCurrentInput(interaction, intent)
+	}
+
 	switch intent.Navigation {
 	case "previous":
 		if interaction.Agent == "opencode" {
@@ -426,4 +433,44 @@ func openCodeNavigationKeys(interaction *Interaction, target Focus) []string {
 
 func containsInt(values []int, target int) bool {
 	return slices.Contains(values, target)
+}
+
+func planCurrentInput(i *Interaction, intent InputIntent) []InputStep {
+	if intent.OtherSelected && i.InputMode != "" {
+		if i.InputMode == "replace-line" {
+			return []InputStep{{Keys: []string{"Ctrl+E", "Ctrl+U"}}, {Text: intent.OtherText}, {Keys: []string{"Enter"}}}
+		}
+		return []InputStep{{Text: intent.OtherText}}
+	}
+	if len(i.ActionKeys) > 0 {
+		if len(intent.Selected) != 1 || intent.Selected[0] < 0 || intent.Selected[0] >= len(i.ActionKeys) {
+			return nil
+		}
+		return []InputStep{{Keys: i.ActionKeys[intent.Selected[0]]}}
+	}
+	if i.Agent != "omp-ask-current" {
+		return nil
+	}
+	if i.Kind == "single_select" {
+		if len(intent.Selected) != 1 {
+			return nil
+		}
+		return []InputStep{{Keys: append(moveKeys(intent.Selected[0]-i.Focus.Index), "Enter")}}
+	}
+	focus := i.Focus.Index
+	var steps []InputStep
+	for index, o := range i.Options {
+		if strings.HasPrefix(o.Label, "Other (type your own)") {
+			if slices.Contains(intent.Selected, index) {
+				return append(steps, InputStep{Keys: append(moveKeys(index-focus), "Enter")})
+			}
+			continue
+		}
+		if o.Selected == slices.Contains(intent.Selected, index) {
+			continue
+		}
+		steps = append(steps, InputStep{Keys: append(moveKeys(index-focus), "Space")})
+		focus = index
+	}
+	return append(steps, InputStep{Keys: []string{"Enter"}})
 }

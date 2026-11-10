@@ -60,6 +60,12 @@ APK 也可以复制到手机手动安装。已有发布版使用固定签名；�
 
 不要提交 `local.properties`、构建缓存、签名私钥或设备状态。Release 附件只使用 CI 构建和签名，不手工上传本地 APK。
 
+## Pi / Oh My Pi 对话输入
+
+正常状态下的 Pi / OMP 对话输入使用 Relay 的 `submit_prompt`，由 Herdr 处理，不依赖可选的 Pi bridge。若 Herdr 拒绝当前状态的输入，保留草稿并显示错误，不自动改用终端或重发。
+
+等待审批／问题时，先处理对应交互，或显式切换“终端”手动输入。`get_pi_prompt_capability` / `send_pi_prompt_unconfirmed` 是“Pi 阻塞、输入类型未知”时的专用桥接接口，不是 Pi / OMP 的通用发送接口；Android 不使用此特殊路径。Pi / OMP 的附件入口仍保持禁用。 新版审批与提问使用独立结构化操作；HTML 表单逐字段操作、最后单独提交。实际支持范围与测试依据见[上游自动验证](../docs/pi-omp-current-support.md)，不能仅凭存在通用回答按钮就认为已完成适配。
+
 ## 进一步了解
 
 [文件访问](../docs/file-access.md) · [电脑与工作空间分组](AGENT-GROUPS.md) · [验证说明](VALIDATION.md) · [更新记录](CHANGELOG.md) · [第三方许可](THIRD_PARTY.md)

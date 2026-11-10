@@ -1,0 +1,23 @@
+{
+  "stepwise": true,
+  "id": "9e2183c24049a0eecdfb6ab9",
+  "kind": "single_select",
+  "question": "Describe your choice",
+  "options": [
+    {
+      "index": 0,
+      "label": "取消",
+      "description": "",
+      "selected": false
+    }
+  ],
+  "other": {
+    "selected": false,
+    "text": "",
+    "label": "输入答案（替换当前输入）",
+    "allow_empty": true
+  },
+  "submit_label": "确认所选操作",
+  "can_chat": false,
+  "can_go_back": false
+}

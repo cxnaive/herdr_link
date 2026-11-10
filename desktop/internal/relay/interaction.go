@@ -25,6 +25,7 @@ type QuestionOther struct {
 	Hidden      bool   `json:"hidden"`
 }
 type Interaction struct {
+	Stepwise      bool             `json:"stepwise"`
 	ID            string           `json:"id"`
 	Kind          string           `json:"kind"`
 	Question      string           `json:"question"`
@@ -44,7 +45,7 @@ func ApprovalPayload(live, captured Agent, index int) (Message, error) {
 	return Message{"index": index, "total": len(captured.Options), "choice": captured.Options[index], "event_id": captured.EventID, "approval_fingerprint": captured.ApprovalFingerprint}, nil
 }
 func (q Interaction) Answer(indices []int, other bool, text string) (Message, error) {
-	if q.ID == "" || len(indices) == 0 && !other {
+	if q.ID == "" || len(indices) == 0 && !other && !(q.Stepwise && q.Kind == "multi_select") {
 		return nil, errors.New("请选择答案")
 	}
 	seen := map[int]bool{}

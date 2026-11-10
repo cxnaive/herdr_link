@@ -1,0 +1,40 @@
+{
+  "stepwise": true,
+  "id": "df23927f0c821603b69cbf15",
+  "kind": "multi_select",
+  "question": "╭─ Ask ────────────────────────────────────────────────────────────────────────╮\nfeatures    Submit\nSelect features\n├──────────────────────────────────────────────────────────────────────────────┤",
+  "options": [
+    {
+      "index": 0,
+      "label": "Logging",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 1,
+      "label": "Metrics",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 2,
+      "label": "Tracing",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 3,
+      "label": "Other (type your own)",
+      "description": "",
+      "selected": false
+    }
+  ],
+  "other": {
+    "selected": false,
+    "text": "",
+    "hidden": true
+  },
+  "submit_label": "保存选择并继续",
+  "can_chat": false,
+  "can_go_back": false
+}

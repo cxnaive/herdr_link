@@ -1,0 +1,34 @@
+{
+  "stepwise": true,
+  "id": "1557ae32393efe908cc445e0",
+  "kind": "single_select",
+  "question": "Allow synthetic action?\nNo tool will execute.",
+  "options": [
+    {
+      "index": 0,
+      "label": "Yes",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 1,
+      "label": "No",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 2,
+      "label": "取消",
+      "description": "",
+      "selected": false
+    }
+  ],
+  "other": {
+    "selected": false,
+    "text": "",
+    "hidden": true
+  },
+  "submit_label": "确认所选操作",
+  "can_chat": false,
+  "can_go_back": false
+}

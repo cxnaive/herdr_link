@@ -1,0 +1,52 @@
+{
+  "stepwise": true,
+  "id": "dd916cf3d86930e796a84078",
+  "kind": "single_select",
+  "question": "原生表单：每次只操作当前字段，最后单独提交。\n╭─ Ask ────────────────────────────────────────────────────────────────────────╮\nDeployment settings\n\nRegion\n❯ ◉ North\n○ South\n○ Other: type your own\n\nNotes\n│ synthetic\n\nSubmit\n├──────────────────────────────────────────────────────────────────────────────┤",
+  "options": [
+    {
+      "index": 0,
+      "label": "选择当前项并到下一字段",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 1,
+      "label": "向上移动",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 2,
+      "label": "向下移动",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 3,
+      "label": "下一字段（不提交）",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 4,
+      "label": "上一字段",
+      "description": "",
+      "selected": false
+    },
+    {
+      "index": 5,
+      "label": "取消表单",
+      "description": "",
+      "selected": false
+    }
+  ],
+  "other": {
+    "selected": false,
+    "text": "",
+    "hidden": true
+  },
+  "submit_label": "执行所选操作",
+  "can_chat": false,
+  "can_go_back": false
+}

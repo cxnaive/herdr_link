@@ -7,7 +7,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/0cv/herdr-mobile-relay/internal/herdr"
 	"github.com/0cv/herdr-mobile-relay/internal/question"
 )
 
@@ -264,9 +266,6 @@ func decodeQuestionPayload(message map[string]any) (questionPayload, error) {
 	}
 	sort.Ints(payload.Selected)
 	payload.Selected = uniqueInts(payload.Selected)
-	if len(payload.Selected) == 0 && payload.OtherText == "" && !payload.OtherSelected {
-		return payload, fmt.Errorf("choose an answer or enter an Other answer")
-	}
 	if payload.OtherText != "" && !payload.OtherSelected {
 		return payload, fmt.Errorf("other text must be selected")
 	}
@@ -316,12 +315,17 @@ func (d *Dispatcher) submitQuestion(ctx context.Context, receivedAt time.Time, r
 		if !ok || (current.Status != "blocked" && current.Status != "done") {
 			return EffectResult{Result: d.fail(requestID, action, paneID, "The question changed before the answer was applied")}
 		}
+		if current.Interaction != nil && current.Interaction.Agent == "omp-approval-current" {
+			if err := contextDelay(effectCtx, 550*time.Millisecond); err != nil {
+				return EffectResult{Result: d.failErr(requestID, action, paneID, err)}
+			}
+		}
 		read, err := d.herdr.ReadPane(effectCtx, paneID, 80, "ansi")
 		if err != nil {
 			return EffectResult{Result: d.failErr(requestID, action, paneID, err)}
 		}
 		interaction := question.Parse(string(read.Content), current.Agent)
-		if payload.OtherSelected && interaction != nil {
+		if payload.OtherSelected && interaction != nil && !interaction.Stepwise {
 			d.state.RecordCustomAnswer(paneID, interaction.Question, payload.OtherText)
 		}
 		if interaction == nil || interaction.ID != payload.InteractionID {
@@ -364,6 +368,23 @@ func (d *Dispatcher) submitQuestion(ctx context.Context, receivedAt time.Time, r
 }
 
 func validateQuestionPayload(payload questionPayload, interaction *question.Interaction) error {
+	if len(payload.Selected) == 0 && !payload.OtherSelected && payload.Navigation == "" && !payload.Clarify && !(interaction.Stepwise && interaction.Kind == "multi_select") {
+		return fmt.Errorf("choose an answer or enter an Other answer")
+	}
+	if interaction.Stepwise {
+		if payload.Navigation != "" || payload.Clarify {
+			return fmt.Errorf("use the current dialog's explicit controls")
+		}
+		if !utf8.ValidString(payload.OtherText) {
+			return fmt.Errorf("invalid answer text")
+		}
+		for _, r := range payload.OtherText {
+			if r < 32 && r != '\n' && r != '\t' || r >= 127 && r <= 159 {
+				return fmt.Errorf("control characters cannot be sent as an answer")
+			}
+		}
+	}
+
 	switch {
 	case payload.Navigation == "previous" && !interaction.CanGoBack:
 		return fmt.Errorf("there is no previous question to open")
@@ -407,7 +428,7 @@ func (d *Dispatcher) executeQuestion(
 ) error {
 	var dispatched bool
 	keys := func(ks []string) error {
-		err := d.sendQuestionKeysForSession(ctx, token, paneID, ks)
+		err := d.sendQuestionKeysForSessionMode(ctx, token, paneID, ks, interaction.Stepwise)
 		if err == nil {
 			dispatched = true
 			return nil
@@ -468,6 +489,9 @@ func (d *Dispatcher) sendQuestionKeys(ctx context.Context, paneID string, keys [
 }
 
 func (d *Dispatcher) sendQuestionKeysForSession(ctx context.Context, token WorkerToken, paneID string, keys []string) error {
+	return d.sendQuestionKeysForSessionMode(ctx, token, paneID, keys, false)
+}
+func (d *Dispatcher) sendQuestionKeysForSessionMode(ctx context.Context, token WorkerToken, paneID string, keys []string, native bool) error {
 	for index, key := range keys {
 		if err := d.paneSessionError(token); err != nil {
 			if index > 0 {
@@ -475,7 +499,14 @@ func (d *Dispatcher) sendQuestionKeysForSession(ctx context.Context, token Worke
 			}
 			return err
 		}
-		if err := d.herdr.SendKeys(ctx, paneID, []string{key}); err != nil {
+		var err error
+		if native && key == "Shift+Tab" {
+			// Native form navigation must not become pasted escape-sequence text.
+			err = d.herdr.SendInput(ctx, paneID, herdr.PaneInput{Keys: []string{"shift+Tab"}})
+		} else {
+			err = d.herdr.SendKeys(ctx, paneID, []string{key})
+		}
+		if err != nil {
 			if index > 0 {
 				return partiallyApplied("question input was only partially applied", err)
 			}
@@ -538,13 +569,13 @@ func (d *Dispatcher) watchQuestion(
 				continue
 			}
 			current := question.Parse(string(read.Content), agent.Agent)
-			if current != nil {
+			if current != nil && !current.Stepwise {
 				if text := strings.TrimSpace(current.Other.Text); text != "" {
 					d.state.RecordCustomAnswer(paneID, current.Question, text)
 				}
 				question.FillCustomAnswers(current, d.state.CustomAnswers(paneID))
 			}
-			expectsQuestion := original != nil && (navigation != "" ||
+			expectsQuestion := original != nil && (original.Stepwise || navigation != "" ||
 				action == "answer_question" &&
 					original.QuestionIndex > 0 &&
 					original.QuestionIndex < original.QuestionTotal)
@@ -604,6 +635,9 @@ func (d *Dispatcher) finishQuestionWatch(
 				result.Data = map[string]any{"interaction": current}
 			}
 		}
+	case action == "answer_question" && original != nil && original.Stepwise && current != nil:
+		result.Phase = "advanced"
+		result.Data = map[string]any{"interaction": current}
 	case action == "answer_question" && current != nil &&
 		original.QuestionIndex > 0 && current.QuestionIndex == original.QuestionIndex+1:
 		result.Phase = "advanced"
@@ -623,7 +657,11 @@ func (d *Dispatcher) finishQuestionWatch(
 	case navigation == "next":
 		d.recordActivity("question", "navigated", "Opened next question", paneID, requestID)
 	case action == "answer_question":
-		d.recordActivity("question", "answered", "Answered question", paneID, requestID)
+		if original != nil && original.Stepwise {
+			d.recordActivity("question", "updated", "Updated native dialog", paneID, requestID)
+		} else {
+			d.recordActivity("question", "answered", "Answered question", paneID, requestID)
+		}
 	}
 }
 
