@@ -30,7 +30,7 @@ The desktop uses existing `workspace_list`, `workspace_file_read` and `workspace
 
 ## Validation
 
-Windows runs the desktop's headless native UI, Ghostty stream, transport and file tests. Linux/WSL runs the Unix socket adapter and existing Codex terminal authority tests. The root server module remains Linux/macOS only; its Windows syscall build failures are unrelated to the desktop's independent module. A socket fixture is not a deployment test: validate against a live protocol-22 Herdr before distributing this preview.
+Windows runs the desktop's headless native UI, Ghostty stream, transport and file tests, plus native Relay/Herdr integration and Codex process-ownership checks. Linux/WSL retains the Unix socket adapter and existing Codex authority tests. Windows Relay details and remaining runtime limits are in [Windows Relay](windows-relay.md). A socket fixture is not a deployment test: validate against a live protocol-22 Herdr before distributing this preview.
 
 ## Retained terminal panels
 

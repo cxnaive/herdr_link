@@ -10,6 +10,7 @@ import (
 
 	"github.com/0cv/herdr-mobile-relay/internal/codexruntime"
 	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 )
 
 const codexStandaloneSource = "codex-tui-standalone:"
@@ -140,7 +141,7 @@ func (s *Server) standalonePrimary(ctx context.Context, a *coordinator.AgentStat
 			return bad(reason)
 		}
 	}
-	if t.CWD != a.Cwd {
+	if !pathidentity.SameDirectory(t.CWD, a.Cwd) {
 		return bad("standalone_metadata_conflict")
 	}
 	return t, ""

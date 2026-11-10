@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 	"unicode"
+
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 )
 
 const codexTurnTailBytes = 4 * 1024 * 1024
@@ -46,7 +48,7 @@ func (r *Reader) CodexTurnFor(ctx context.Context, cwd, id, root string) (CodexT
 		return CodexTurn{}, ctx.Err()
 	}
 	meta, loc, reason := r.CodexBindingMetadata(cwd, id)
-	if reason != "" || filepath.Clean(meta.CWD) != filepath.Clean(cwd) || filepath.Clean(loc.Root) != filepath.Clean(root) {
+	if reason != "" || !pathidentity.SameDirectory(meta.CWD, cwd) || filepath.Clean(loc.Root) != filepath.Clean(root) {
 		return CodexTurn{}, errCodexTurnUnavailable
 	}
 	file, err := openConversationSource(loc.Path)

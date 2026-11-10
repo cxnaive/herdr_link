@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
+
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 )
 
 func testSocketDir(t *testing.T) string {
@@ -31,7 +32,7 @@ func testPiHerdrSocket(t *testing.T) string {
 			t.Fatal(err)
 		}
 		relative, err := filepath.Rel(os.TempDir(), path)
-		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || info.Mode()&os.ModeSocket == 0 || info.Sys().(*syscall.Stat_t).Uid != uint32(os.Getuid()) {
+		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || info.Mode()&os.ModeSocket == 0 || !privatepath.Owned(info) {
 			t.Fatal("preallocated Pi fixture socket must be owned and under the selected temporary directory")
 		}
 		return path

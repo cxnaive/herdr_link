@@ -7,10 +7,12 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Operate current Pi selectors and input dialogs, OMP approval/Ask dialogs, and native HTML forms through exact-target controls. HTML fields stay in the upstream form: insert text, move between fields, and explicitly submit only at the final control; hidden/private input and unrecognized layouts remain terminal-only.
+- Bind native Windows x64 Codex terminals to their verified sessions, enabling structured history, prompts, approvals and run state. Shared runtimes also support model/reasoning settings; embedded runtimes retain their terminal-only settings interface.
 
 ### Fixed
 - Use Space for current OMP multi-select answers, distinguish remembering an approval scope from granting it, and prevent an Android question dialog from submitting to another Agent after navigation.
 - Send ordinary Pi and Oh My Pi conversation messages through the normal prompt route on Android instead of requiring the blocked-Pi bridge. Preserve drafts and delivery uncertainty; approvals still require their own controls or explicit terminal input.
+- Allow Windows Relay installation under an ordinary user by applying only the changed owner and access permissions, without requesting audit-policy privileges.
 
 ## [0.3.2] - 2026-11-09
 
@@ -21,7 +23,6 @@ project follows [Semantic Versioning](https://semver.org/).
 - Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.
 
 ### Fixed
-- Allow Windows Relay installation under an ordinary user by applying only the changed owner and access permissions, without requesting audit-policy privileges.
 - Keep retained Herdr terminal panels accessible after an Agent exits. List them as terminals without reusing the exited Agent's conversation identity; Android and desktop open them in terminal mode.
 
 ## [0.3.1] - 2026-11-09

@@ -87,6 +87,10 @@ jobs:
         run: |
           go test -count=1 -timeout=90s ./internal/localipc ./internal/privatepath ./internal/processjob
           if ($LASTEXITCODE -ne 0) { throw 'Windows platform boundary tests failed.' }
+          go test -count=1 -timeout=90s -run '^TestWindowsCodex' ./internal/app
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Codex ownership tests failed.' }
+          go test -count=1 ./internal/pathidentity
+          if ($LASTEXITCODE -ne 0) { throw 'Windows path identity tests failed.' }
       - name: Install pinned real Herdr (entire ConPTY package)
         run: |
           $zip = Join-Path $env:RUNNER_TEMP 'herdr-0.9.5-windows.zip'

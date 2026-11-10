@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -55,7 +56,7 @@ func (r *rpc) runThread(ctx context.Context, id, cwd string) (runThread, error) 
 	if err := r.call(ctx, "thread/read", map[string]any{"threadId": id, "includeTurns": false}, &data); err != nil {
 		return runThread{}, ErrRunStateUnavailable
 	}
-	if data.Thread.ID != id || data.Thread.CWD != cwd {
+	if data.Thread.ID != id || !pathidentity.SameDirectory(data.Thread.CWD, cwd) {
 		return runThread{}, ErrRunStateUnavailable
 	}
 	switch data.Thread.Status.Type {

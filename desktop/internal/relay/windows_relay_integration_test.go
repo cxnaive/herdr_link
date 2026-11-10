@@ -107,7 +107,7 @@ func TestWindowsRelayEndToEnd(t *testing.T) {
 	if agent.TerminalID != f.Terminal {
 		t.Fatal("inventory terminal mismatch")
 	}
-	if f.Phase == "agent" && (agent.BindingReason != "runtime_platform_unsupported" || agent.CanChat()) {
+	if f.Phase == "agent" && (agent.BindingReason != "process_unavailable" || agent.CanChat()) {
 		t.Fatalf("Windows must not invent Codex session proof: %s", agent.BindingReason)
 	}
 	if f.Phase != "agent" && (agent.AgentSessionID != "" || agent.Agent != "") {

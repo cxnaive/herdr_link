@@ -137,6 +137,38 @@ To clear retained multiple roots, the user can normally exit the old TUI and run
 can display an ownership-conflict dialog; Relay does not kill that backend,
 interact with the dialog, fork the conversation or alter Codex Desktop settings.
 
+## Windows x64 process and runtime evidence
+
+Windows uses the same root reduction, configured-title selection and binding
+leases. It replaces `/proc` with read-only native process queries: current-user
+SID, creation time, session, parent PID, image, command line, working directory,
+and the allowlisted `CODEX_HOME` environment key. Herdr reports the foreground
+root (often the npm Node launcher); only its unique native Codex child is selected.
+Daemon/exec/remote commands, foreign parents, ambiguous children and reused parent
+PIDs are rejected. Process identity is rechecked after discovery.
+
+Shared-runtime origins come from `GetExtendedTcpTable` owner-module listener
+records, including endpoint creation time. Only IPv4 loopback listeners owned by
+the selected TUI qualify. The existing control socket and runtime metadata APIs
+work on Windows; global loaded threads remain insufficient by themselves.
+
+For embedded runtimes, Relay opens existing writer files read-only, queries
+`FileProcessIdsUsingFileInformation`, and requires the TUI to be the sole external
+file user. Reads at offset 0, 4096 and beyond EOF must return the kernel's lock
+violation expected from Codex's exclusive whole-file lock. Ordinary open files,
+shared locks, first-byte-only locks, reparse files and changed file identities are
+rejected. Owner/file/process identity is checked again. Relay neither takes nor
+releases these locks; its own concurrent inspection handles are excluded from
+external ownership. Additional external handles can conservatively prevent proof.
+These probes rely on Codex's lock contract, not a Windows API enumerating exact
+lock ranges. At most 4096 lock-directory entries and 64 owned threads are examined.
+
+Windows working-directory aliases (including packaged-app redirection) are
+accepted only when both paths identify the same directory object. No prefix or
+basename matching is used. Native amd64 process layouts are currently supported;
+other architectures fail closed. Embedded model settings remain unavailable when
+Codex exposes no control endpoint; never use another shared runtime as a substitute.
+
 ## Phone/API boundary
 
 The phone does not enumerate processes, analyze candidate trees or choose a report.
