@@ -1,1 +1,4 @@
 *.ansi binary
+
+# Release descriptors hash these exact committed bytes, including line endings.
+web/** -text

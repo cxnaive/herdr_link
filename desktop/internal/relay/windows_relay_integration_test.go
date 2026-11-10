@@ -51,11 +51,18 @@ func TestWindowsRelayEndToEnd(t *testing.T) {
 	}
 	defer s.Close()
 	var agent Agent
+	refresh := time.NewTicker(500 * time.Millisecond)
+	defer refresh.Stop()
+	if err = s.Send(Message{"type": "refresh_agents", "protocol": 3}); err != nil {
+		t.Fatal(err)
+	}
 	for {
-		if err = s.Send(Message{"type": "refresh_agents", "protocol": 3}); err != nil {
-			t.Fatal(err)
-		}
 		select {
+		case <-refresh.C:
+			if err = s.Send(Message{"type": "refresh_agents", "protocol": 3}); err != nil {
+				t.Fatal(err)
+			}
+			continue
 		case <-ctx.Done():
 			t.Fatal("current inventory not received")
 		case m := <-s.Events:
@@ -91,6 +98,12 @@ func TestWindowsRelayEndToEnd(t *testing.T) {
 			break
 		}
 	}
+	// Continue draining unsolicited inventory/activity events while waiting for
+	// request replies, just as the application event loop does.
+	go func() {
+		for range s.Events {
+		}
+	}()
 	if agent.TerminalID != f.Terminal {
 		t.Fatal("inventory terminal mismatch")
 	}

@@ -207,7 +207,11 @@ func TestNativeWindowsHerdrRelayGatewayAndClient(t *testing.T) {
 	startRelay := func() func() {
 		stop := start("relay", relayBin, "serve")
 		wait("Relay registration", func() bool {
-			return healthy("http://127.0.0.1:"+port, func(h map[string]any) bool { g, _ := h["gateway"].(map[string]any); return g["registered"] == true })
+			return healthy("http://127.0.0.1:"+port, func(h map[string]any) bool {
+				g, _ := h["gateway"].(map[string]any)
+				hash, _ := h["bundle_hash"].(string)
+				return g["registered"] == true && hash != ""
+			})
 		})
 		return stop
 	}

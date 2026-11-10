@@ -4,6 +4,6 @@ package privatepath
 
 import "os"
 
-// Gateway credential management is enabled only where private Unix ownership is
-// verified. Other existing transports remain available on their original paths.
+// FileInfo alone cannot prove Windows ownership or ACLs. Call Private with
+// the path when checking credential files on Windows.
 func Owned(os.FileInfo) bool { return false }
