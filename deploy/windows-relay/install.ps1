@@ -18,7 +18,9 @@ foreach ($id in @($sid.Value, 'S-1-5-18', 'S-1-5-32-544')) {
     $rule = [Security.AccessControl.FileSystemAccessRule]::new($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
     $acl.AddAccessRule($rule)
 }
-Set-Acl -LiteralPath $RuntimeDirectory -AclObject $acl
+# Persist only the owner and DACL we changed; Set-Acl also requests audit access
+# on some Windows hosts, requiring SeSecurityPrivilege for ordinary users.
+[IO.FileSystemAclExtensions]::SetAccessControl([IO.DirectoryInfo]::new($RuntimeDirectory), $acl)
 $config = Join-Path $RuntimeDirectory 'windows-relay.json'
 if (-not (Test-Path -LiteralPath $config)) {
     $herdr = (Get-Command herdr.exe -CommandType Application -ErrorAction Stop).Source

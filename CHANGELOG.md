@@ -14,6 +14,7 @@ project follows [Semantic Versioning](https://semver.org/).
 - Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.
 
 ### Fixed
+- Allow Windows Relay installation under an ordinary user by applying only the changed owner and access permissions, without requesting audit-policy privileges.
 - Keep retained Herdr terminal panels accessible after an Agent exits. List them as terminals without reusing the exited Agent's conversation identity; Android and desktop open them in terminal mode.
 
 ## [0.3.1] - 2026-11-09
