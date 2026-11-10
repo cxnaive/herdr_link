@@ -253,7 +253,7 @@ func (s *Session) readLoop() {
 		s.mu.Lock()
 		ch := s.pending[id]
 		s.mu.Unlock()
-		if ch != nil && (strings.HasSuffix(Text(m, "type"), "_result") || Text(m, "type") == "error" || Text(m, "type") == "activity_history") {
+		if ch != nil && (strings.HasSuffix(Text(m, "type"), "_result") || Text(m, "type") == "error" || Text(m, "type") == "activity_history" || Text(m, "type") == "pane_content" || Text(m, "type") == "pane_unchanged" || Text(m, "type") == "pane_resync") {
 			select {
 			case ch <- m:
 			default:

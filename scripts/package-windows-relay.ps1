@@ -10,6 +10,7 @@ $stage = Join-Path $OutputDirectory $package
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 Copy-Item dist/windows/herdr-mobile-relay.exe $stage
 Copy-Item deploy/windows-relay/*.ps1 $stage
+Copy-Item deploy/windows-relay/THIRD-PARTY-go-winio.txt $stage
 Copy-Item LICENSE,VERSION.json $stage
 Copy-Item docs/windows-relay.md (Join-Path $stage 'README.md')
 Copy-Item -Recurse web $stage

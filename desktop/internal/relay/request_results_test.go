@@ -5,12 +5,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestEncryptedUploadRepliesReachWaitingRequest(t *testing.T) {
-	for _, typ := range []string{"upload_begin_result", "upload_chunk_result", "upload_finish_result", "upload_cancel_result"} {
+func TestEncryptedTypedRepliesReachWaitingRequest(t *testing.T) {
+	for _, typ := range []string{"upload_begin_result", "upload_chunk_result", "upload_finish_result", "upload_cancel_result", "pane_content", "pane_unchanged", "pane_resync"} {
 		t.Run(typ, func(t *testing.T) {
 			client, server := net.Pipe()
 			t.Cleanup(func() { client.Close(); server.Close() })
@@ -38,7 +39,12 @@ func TestEncryptedUploadRepliesReachWaitingRequest(t *testing.T) {
 					result <- err
 					return
 				}
-				response, _ := json.Marshal(Message{"type": typ, "request_id": request["request_id"], "result": Message{"fixture": "ok"}})
+				reply := Message{"type": typ, "request_id": request["request_id"], "result": Message{"fixture": "ok"}}
+				if strings.HasPrefix(typ, "pane_") {
+					delete(reply, "result")
+					reply["fixture"] = "ok"
+				}
+				response, _ := json.Marshal(reply)
 				nonce, aad = nonceAAD(0, "s2c")
 				frame := make([]byte, 10)
 				frame[0] = 2
@@ -47,7 +53,11 @@ func TestEncryptedUploadRepliesReachWaitingRequest(t *testing.T) {
 			}()
 			ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 			defer cancel()
-			data, err := session.Request(ctx, Message{"type": "upload_begin"})
+			action := "upload_begin"
+			if strings.HasPrefix(typ, "pane_") {
+				action = "read_pane"
+			}
+			data, err := session.Request(ctx, Message{"type": action})
 			if err != nil || Text(data, "fixture") != "ok" {
 				t.Fatal("reply went to events instead of requester", data, err)
 			}
