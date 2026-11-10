@@ -6,6 +6,8 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -43,6 +45,30 @@ def native(path, binary, arch="amd64"):
             z.addfile(member, io.BytesIO(value))
 
 
+def windows_relay_files():
+    binary = bytearray(128)
+    binary[:2] = b'MZ'; binary[60:64] = (64).to_bytes(4, 'little')
+    binary[64:70] = b'PE\0\0\x64\x86'
+    files = {name: name.encode() for name in ('install.ps1', 'run.ps1', 'LICENSE', 'README.md',
+             'THIRD-PARTY-go-winio.txt', 'web/index.html', 'web/release.json', 'web/version.json')}
+    files.update({'herdr-mobile-relay.exe': bytes(binary), 'VERSION.json': json.dumps(MANIFEST).encode()})
+    return files
+
+
+def windows_relay(path, changes=None, files=None):
+    files = windows_relay_files() if files is None else files
+    info = {'version': '0.3.0', 'revision': SHA, 'run_id': str(RUN), 'source_dirty': False,
+            'component': 'herdr-mobile-relay', 'target': 'windows/amd64', 'format': 'windows-relay-v1',
+            'signed': False, 'upstream_plugin_auto_update': False, 'windows_service': False,
+            'binary_sha256': hashlib.sha256(files['herdr-mobile-relay.exe']).hexdigest(),
+            'files': [{'file': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()} for name, data in files.items()]}
+    info.update(changes or {})
+    with zipfile.ZipFile(path, 'w') as z:
+        for name, data in {**files, 'BUILD-INFO.json': json.dumps(info).encode()}.items():
+            z.writestr('herdr-link-relay-0.3.0-windows-amd64/' + name, data)
+    sums(path.parent)
+
+
 class ProjectReleaseTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
@@ -76,6 +102,9 @@ class ProjectReleaseTests(unittest.TestCase):
             for r in records: z.writestr(r['file'], r['file'])
             z.writestr('BUILD-INFO.json', json.dumps(info)); z.writestr('SHA256SUMS.txt', '')
         sums(wd)
+        wr = self.inputs / 'herdr-relay-windows-amd64-5'; wr.mkdir()
+        self.windows_relay = wr / P.assets('0.3.0')['relay-windows']
+        windows_relay(self.windows_relay)
         md = self.inputs / 'herdr-desktop-macos-universal-5'; md.mkdir()
         dmg = md / 'herdr-desktop-0.3.0.dmg'; dmg.write_bytes(b'fixture' + b'koly' + b'\0' * 508)
         files = {name: {'size': 64, 'sha256': 'd' * 64, 'executable': True} for name in ('Contents/Info.plist', 'Contents/MacOS/Herdr Desktop', 'Contents/Resources/libghostty-vt.dylib')}
@@ -119,10 +148,11 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_assemble_exact_bytes_release_only_and_checksums(self):
         out = self.assemble()
         self.assertEqual(set(p.name for p in out.iterdir()), set(P.file_names('0.3.0')))
-        self.assertEqual(len(P.file_names('0.3.0')), 18)
+        self.assertEqual(len(P.file_names('0.3.0')), 19)
         self.assertFalse(any('debug' in p.name or 'codexfix' in p.name for p in out.iterdir()))
         self.assertEqual((out / P.assets('0.3.0')['android-arm64-v8a']).read_bytes(), (self.inputs / 'android-apks-signed/Herdr-Pocket-0.3.0-release-arm64-v8a.apk').read_bytes())
         self.assertEqual((out / 'INSTALL.md').read_text(), 'Install 0.3.0')
+        self.assertEqual((out / P.assets('0.3.0')['relay-windows']).read_bytes(), self.windows_relay.read_bytes())
         P.verify_bundle(out, MANIFEST, SHA, RUN)
         with self.assertRaises(ValueError): self.assemble()
 
@@ -143,6 +173,84 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_rejects_changed_prepared_file(self):
         out = self.assemble(); (out / P.assets('0.3.0')['relay']).write_bytes(b'replaced')
         with self.assertRaises(ValueError): P.verify_bundle(out, MANIFEST, SHA, RUN)
+
+    def test_windows_relay_requires_matching_source_run_target_and_complete_files(self):
+        for key, value in [('revision', 'c' * 40), ('run_id', '999'), ('source_dirty', True),
+                           ('target', 'linux/amd64'), ('signed', True), ('files', []),
+                           ('binary_sha256', '0' * 64)]:
+            windows_relay(self.windows_relay, {key: value})
+            with self.subTest(key=key), self.assertRaises(ValueError): self.assemble()
+            self.assertFalse((self.root / 'out').exists())
+        self.windows_relay.parent.rename(self.inputs / 'missing-relay')
+        with self.assertRaisesRegex(ValueError, 'Missing or ambiguous producer'): self.assemble()
+
+    def test_windows_relay_rejects_unsafe_or_incomplete_archive(self):
+        for name in ('../escape', 'web/../../escape', 'web\\escape', 'web/INDEX.html', 'web/unsafe:stream'):
+            files = windows_relay_files(); files[name] = b'bad'
+            windows_relay(self.windows_relay, files=files)
+            with self.subTest(name=name), self.assertRaises(ValueError): self.assemble()
+        for name in ('install.ps1', 'web/index.html', 'web/release.json'):
+            files = windows_relay_files(); del files[name]
+            windows_relay(self.windows_relay, files=files)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'Incomplete'): self.assemble()
+
+    def test_windows_relay_rejects_wrong_pe_and_file_digest(self):
+        for binary in (b'truncated', b'MZ' + b'\0' * 126):
+            files = windows_relay_files(); files['herdr-mobile-relay.exe'] = binary
+            windows_relay(self.windows_relay, files=files)
+            with self.assertRaisesRegex(ValueError, 'PE'): self.assemble()
+        windows_relay(self.windows_relay)
+        with zipfile.ZipFile(self.windows_relay) as z:
+            members = {name: z.read(name) for name in z.namelist()}
+        members['herdr-link-relay-0.3.0-windows-amd64/install.ps1'] = b'replaced'
+        with zipfile.ZipFile(self.windows_relay, 'w') as z:
+            for name, data in members.items(): z.writestr(name, data)
+        sums(self.windows_relay.parent)
+        with self.assertRaisesRegex(ValueError, 'file mismatch'): self.assemble()
+
+    def test_windows_relay_publisher_revalidates_producer_metadata(self):
+        out = self.assemble()
+        path = out / 'BUILD-INFO.json'; info = json.loads(path.read_text())
+        info['producers']['relay-windows']['run_id'] = '999'
+        path.write_text(json.dumps(info)); sums(out)
+        with self.assertRaisesRegex(ValueError, 'producer metadata mismatch'):
+            P.verify_bundle(out, MANIFEST, SHA, RUN)
+
+    def test_windows_relay_download_requires_publication_receipt(self):
+        record = {'version': '0.3.0', 'tag': 'v0.3.0'}
+        self.assertNotIn('windows-amd64.zip', D.download_blocks(record)['native-downloads'])
+        record['assets'] = {P.assets('0.3.0')['relay-windows']: {}}
+        self.assertIn(P.assets('0.3.0')['relay-windows'], D.download_blocks(record)['native-downloads'])
+
+    @unittest.skipUnless(os.name == 'nt' and shutil.which('pwsh'), 'Windows PowerShell package test')
+    def test_windows_packager_produces_valid_bundle_from_clean_source(self):
+        source = self.root / 'package-source'; source.mkdir()
+        for name, data in windows_relay_files().items():
+            dest = {'herdr-mobile-relay.exe': 'dist/windows/herdr-mobile-relay.exe',
+                    'README.md': 'docs/windows-relay.md'}.get(name, name)
+            if name in ('install.ps1', 'run.ps1', 'THIRD-PARTY-go-winio.txt'):
+                dest = 'deploy/windows-relay/' + name
+            path = source / dest; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+        (source / '.gitignore').write_text('dist/\n')
+        def git(*args):
+            return subprocess.check_output(['git', *args], cwd=source, text=True, stderr=subprocess.STDOUT).strip()
+        git('init')
+        git('add', '.gitignore', 'VERSION.json', 'LICENSE', 'deploy', 'docs', 'web')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture')
+        sha = git('rev-parse', 'HEAD')
+        command = ['pwsh', '-NoProfile', '-File', str(ROOT / 'scripts/package-windows-relay.ps1')]
+        env = {**os.environ, 'GITHUB_RUN_ID': str(RUN)}
+        subprocess.run(command, cwd=source, env=env, check=True, capture_output=True)
+        directory = source / 'dist/relay-windows-artifact'
+        path = directory / P.assets('0.3.0')['relay-windows']
+        P.windows_relay_info(path, '0.3.0', sha, RUN)
+        P.V.verify_checksums(directory, [path.name, 'SHA256SUMS.txt'])
+        result = subprocess.run(command, cwd=source, env=env, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        (source / 'LICENSE').write_text('dirty')
+        result = subprocess.run(command + ['-OutputDirectory', 'dist/dirty'], cwd=source, env=env, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((source / 'dist/dirty').exists())
 
     def test_native_archive_rejects_traversal(self):
         p = self.root / 'unsafe.tar.gz'
@@ -298,7 +406,11 @@ class ProjectReleaseTests(unittest.TestCase):
     def test_workflow_assembles_on_builder_and_never_builds_on_publisher(self):
         producer = (ROOT / '.github/workflows/build-artifacts.yml').read_text()
         self.assertIn('inputs.components == \'release\'', producer)
-        self.assertIn('needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release, desktop-macos-release]', producer)
+        self.assertIn('needs: [native-bundles, android-sign, desktop-linux-release, desktop-windows-release, desktop-macos-release, relay-windows-release]', producer)
+        self.assertIn('uses: ./.github/workflows/relay-windows.yml', producer)
+        relay = (ROOT / '.github/workflows/relay-windows.yml').read_text()
+        self.assertIn('workflow_call:', relay)
+        self.assertIn('relay-windows-${{ github.workflow }}-', relay)
         self.assertIn('project_release.py assemble', producer)
         workflow = (ROOT / '.github/workflows/publish-components.yml').read_text()
         self.assertIn('project_release.py prepare', workflow)

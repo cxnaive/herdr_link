@@ -34,6 +34,7 @@ def assets(version):
     return {
         **{f"android-{abi}": f"{prefix}android-{version}-{abi}.apk" for abi in V.ABIS},
         "relay": f"{prefix}relay-{version}-linux-amd64.tar.gz",
+        "relay-windows": f"{prefix}relay-{version}-windows-amd64.zip",
         "gateway": f"{prefix}gateway-{version}-linux-amd64.tar.gz",
         "windows": f"{prefix}desktop-{version}-windows-amd64.zip",
         "macos": f"{prefix}desktop-{version}-macos-universal.dmg",
@@ -100,6 +101,49 @@ def windows_info(path, version, sha, run_id):
         for record in info['files']:
             data = bundle.read(record['file'])
             require(len(data) == record['bytes'] and V.hashlib.sha256(data).hexdigest() == record['sha256'], "Windows binary mismatch")
+        return info
+
+
+def windows_relay_info(path, version, sha, run_id):
+    prefix = f'herdr-link-relay-{version}-windows-amd64/'
+    with zipfile.ZipFile(path) as bundle:
+        members = bundle.infolist()
+        require(len(members) < 10000 and sum(m.file_size for m in members) < 512 * 1024 * 1024, "Oversized Windows Relay ZIP")
+        names = set()
+        files = set()
+        for member in members:
+            name = member.filename
+            p = PurePosixPath(name)
+            require(name.startswith(prefix) and not p.is_absolute() and '..' not in p.parts and
+                    str(p) == name.rstrip('/') and not any(c in name for c in '\\:*?"<>|') and
+                    all(part.rstrip(' .') == part for part in p.parts), "Unsafe Windows Relay archive path")
+            require(name.rstrip('/').casefold() not in names, "Duplicate Windows Relay archive member")
+            names.add(name.rstrip('/').casefold())
+            mode = (member.external_attr >> 16) & 0o170000
+            require(mode in (0, 0o040000 if member.is_dir() else 0o100000), "Unsafe Windows Relay archive member")
+            if not member.is_dir(): files.add(name[len(prefix):])
+        required = {'herdr-mobile-relay.exe', 'install.ps1', 'run.ps1', 'LICENSE', 'VERSION.json',
+                    'README.md', 'THIRD-PARTY-go-winio.txt', 'BUILD-INFO.json',
+                    'web/index.html', 'web/release.json', 'web/version.json'}
+        require(required <= files, "Incomplete Windows Relay package")
+        info = json.loads(bundle.read(prefix + 'BUILD-INFO.json'))
+        provenance(info, version, sha, run_id)
+        require(info['component'] == 'herdr-mobile-relay' and info['target'] == 'windows/amd64' and
+                info['format'] == 'windows-relay-v1', "Wrong Windows Relay target")
+        require(info['source_dirty'] is False and info['signed'] is False and
+                info['upstream_plugin_auto_update'] is False and info['windows_service'] is False, "Wrong Windows Relay build policy")
+        records = info['files']
+        require({r['file'] for r in records} == files - {'BUILD-INFO.json'} and len(records) == len(files) - 1,
+                "Incomplete Windows Relay file manifest")
+        for record in records:
+            data = bundle.read(prefix + record['file'])
+            require(len(data) == record['bytes'] and V.hashlib.sha256(data).hexdigest() == record['sha256'], "Windows Relay file mismatch")
+        binary = bundle.read(prefix + 'herdr-mobile-relay.exe')
+        require(len(binary) >= 64 and binary[:2] == b'MZ', "Invalid Windows Relay PE")
+        offset = int.from_bytes(binary[60:64], 'little')
+        require(offset >= 64 and offset + 6 <= len(binary) and binary[offset:offset + 6] == b'PE\0\0\x64\x86', "Wrong Windows Relay PE architecture")
+        require(V.hashlib.sha256(binary).hexdigest() == info['binary_sha256'], "Windows Relay binary mismatch")
+        require(project_version(json.loads(bundle.read(prefix + 'VERSION.json'))) == version, "Windows Relay manifest version mismatch")
         return info
 
 
@@ -183,6 +227,10 @@ def assemble(inputs, output):
     sources['windows'] = windows / f'Herdr-Desktop-{version}-windows-amd64.zip'
     V.verify_checksums(windows, [sources['windows'].name, 'SHA256SUMS.txt'])
     wi = windows_info(sources['windows'], version, sha, run_id)
+    windows_relay = one_directory(inputs, 'herdr-relay-windows-amd64-*')
+    sources['relay-windows'] = windows_relay / assets(version)['relay-windows']
+    V.verify_checksums(windows_relay, [sources['relay-windows'].name, 'SHA256SUMS.txt'])
+    wri = windows_relay_info(sources['relay-windows'], version, sha, run_id)
     macos = one_directory(inputs, 'herdr-desktop-macos-universal-*')
     mi = macos_info(macos, version, sha, run_id)
     sources['macos'] = macos / f'herdr-desktop-{version}.dmg'
@@ -194,7 +242,7 @@ def assemble(inputs, output):
     install = (ROOT / 'docs/release-install.md').read_text().replace('@VERSION@', version)
     (output / 'INSTALL.md').write_text(install)
     info = {'schema': 2, 'project': manifest['project'], 'version': version, 'revision': sha, 'build_run_id': run_id, 'artifacts': records,
-            'producers': {'android': ai, 'native': native_records, 'linux': linux_records, 'windows': wi, 'macos': mi}}
+            'producers': {'android': ai, 'native': native_records, 'linux': linux_records, 'windows': wi, 'macos': mi, 'relay-windows': wri}}
     write_json(output / 'BUILD-INFO.json', info)
     (output / 'SHA256SUMS.txt').write_text(''.join(f'{digest(p)}  {p.name}\n' for p in sorted(output.iterdir())))
     verify_bundle(output, manifest, sha, run_id)
@@ -210,6 +258,8 @@ def verify_bundle(directory, manifest, sha, run_id, inspect_apks=False):
     for name, r in info['artifacts'].items():
         require(files[name] == {'size': r['size'], 'digest': 'sha256:' + r['sha256']}, "Project metadata mismatch")
     validate_macos(directory / assets(version)['macos'], info['producers']['macos'], version, sha, run_id)
+    wri = windows_relay_info(directory / assets(version)['relay-windows'], version, sha, run_id)
+    require(wri == info['producers']['relay-windows'], "Windows Relay producer metadata mismatch")
     if inspect_apks:
         tools = Path(os.environ['ANDROID_HOME']) / 'build-tools/35.0.0'
         for abi in V.ABIS:

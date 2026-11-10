@@ -4,7 +4,9 @@
 
 ## 获取
 
-在仓库 Actions 的 **relay-windows** 成功运行中下载 `herdr-relay-windows-amd64-<运行编号>`，核对提交与 `BUILD-INFO.json`，验证 `SHA256SUMS.txt` 后解压完整 ZIP。保留 `web` 和脚本，不要只复制 EXE。此预览包不加入正式 Release；CI 失败不会上传可分发包。
+在仓库 Actions 的 **relay-windows** 成功运行中下载 `herdr-relay-windows-amd64-<运行编号>`，核对提交与 `BUILD-INFO.json`，验证 `SHA256SUMS.txt` 后解压其中的 `herdr-link-relay-<版本>-windows-amd64.zip`。保留 `web` 和脚本，不要只复制 EXE。CI 失败不会上传可分发包。
+
+Windows Relay 已接入统一构建：手动运行 `build-artifacts` 并选择 `release` 时，与其他平台从同一提交构建、测试和归档。是否已公开下载以 README 下载区为准；构建成功不会自动创建 Release。
 
 要求 Windows 10/11 x86_64、原生 Herdr（CI 固定验证 0.9.5）、PowerShell 7。Herdr 的完整 Windows 包包含 app-local ConPTY，不能只复制 `herdr.exe`。Relay 与 Agent 共用用户权限，不以管理员身份绕过权限错误。
 
