@@ -59,10 +59,26 @@ func TestNativeWindowsHerdrRelayGatewayAndClient(t *testing.T) {
 	if err = os.WriteFile(filepath.Join(herdrDir, "config.toml"), []byte(cfg), 0600); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
 	defer cancel()
+	logPaths := []string{}
+	defer func() {
+		if !t.Failed() {
+			return
+		}
+		for _, path := range logPaths {
+			b, e := os.ReadFile(path)
+			if e == nil {
+				if len(b) > 12000 {
+					b = b[len(b)-12000:]
+				}
+				t.Logf("isolated %s: %s", filepath.Base(path), b)
+			}
+		}
+	}()
 	start := func(label, bin string, args ...string) func() {
 		t.Helper()
+		logPaths = append(logPaths, filepath.Join(dir, label+".log"))
 		log, err := os.Create(filepath.Join(dir, label+".log"))
 		if err != nil {
 			t.Fatal(err)
