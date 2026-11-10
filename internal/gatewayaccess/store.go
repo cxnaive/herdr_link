@@ -102,7 +102,7 @@ func privateDir(dir string) error {
 		return err
 	}
 	st, err := os.Lstat(dir)
-	if err != nil || !st.IsDir() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+	if err != nil || !st.IsDir() || !privatepath.Private(dir, st) {
 		return errors.New("gateway management directory must be private (0700), not a symlink")
 	}
 	return nil
@@ -150,7 +150,7 @@ func Open(dir string) (*Store, error) {
 	}
 	path := filepath.Join(dir, "access.db")
 	st, err := os.Lstat(path)
-	if err != nil || !st.Mode().IsRegular() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+	if err != nil || !st.Mode().IsRegular() || !privatepath.Private(path, st) {
 		return nil, errors.New("initialize a private gateway management state first")
 	}
 	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: time.Second})

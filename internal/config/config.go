@@ -112,8 +112,8 @@ func Load() (*Config, error) {
 	}
 	cfg.GatewaySelection = parseGatewaySelection(os.Getenv("HERDR_GATEWAY_SELECTION"))
 
-	cfg.ConfigHome = envOr("XDG_CONFIG_HOME", filepath.Join(homeDir(), ".config"))
-	cacheHome := envOr("XDG_CACHE_HOME", filepath.Join(homeDir(), ".cache"))
+	cfg.ConfigHome = envOr("XDG_CONFIG_HOME", defaultConfigHome())
+	cacheHome := envOr("XDG_CACHE_HOME", defaultCacheHome())
 	cfg.DataHome = envOr("XDG_DATA_HOME", filepath.Join(homeDir(), ".local", "share"))
 	cfg.ReleaseRoot = os.Getenv("HERDR_RELEASE_ROOT")
 	if cfg.ReleaseRoot == "" {
@@ -128,6 +128,9 @@ func Load() (*Config, error) {
 	}
 
 	cfg.RuntimeDir = resolveRuntimeDir(cfg.ConfigHome)
+	if err := validatePlatformRuntime(cfg.RuntimeDir); err != nil {
+		return nil, err
+	}
 	cfg.CacheDir = filepath.Join(cacheHome, "herdr-mobile-relay")
 
 	if cfg.WebRoot == "" {
@@ -359,5 +362,5 @@ func envFloatOr(key string, fallback float64) float64 {
 // RuntimeDirectory is shared by serve and gateway-join without loading mutable
 // settings or requiring a working legacy Gateway registration configuration.
 func RuntimeDirectory() string {
-	return resolveRuntimeDir(envOr("XDG_CONFIG_HOME", filepath.Join(homeDir(), ".config")))
+	return resolveRuntimeDir(envOr("XDG_CONFIG_HOME", defaultConfigHome()))
 }

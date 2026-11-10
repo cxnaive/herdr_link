@@ -8,6 +8,7 @@ project follows [Semantic Versioning](https://semver.org/).
 ## [0.3.2] - 2026-11-09
 
 ### Added
+- Windows Relay CI preview for native Herdr: named-pipe API and terminal transport, private Windows credential ACLs, Gateway enrollment and client pairing. Codex runtime/session proof and Unix-only integrations remain explicitly unavailable; this does not add a Windows Relay asset to the public Release.
 - macOS Universal DMG desktop preview for Apple Silicon and Intel, with ad-hoc signing and no Apple notarization. Install the complete app without Go or Xcode; first launch may require explicit approval in macOS Privacy & Security.
 - Show per-computer running and waiting Agent counts in Android and Windows/Linux desktop groups, independent of search and collapse. Exclude terminal-only panels and mark offline or unconfirmed state instead of presenting stale running counts.
 - Set a custom Gateway administrator password through bounded standard input, with salted password hashing and existing computer credentials preserved.

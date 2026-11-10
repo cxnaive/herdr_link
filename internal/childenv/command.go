@@ -11,7 +11,7 @@ func WithoutReleaseCredentials(environment []string) []string {
 	filtered := make([]string, 0, len(environment))
 	for _, variable := range environment {
 		key, _, _ := strings.Cut(variable, "=")
-		switch key {
+		switch strings.ToUpper(key) {
 		case "GH_TOKEN", "GITHUB_TOKEN", "HERDR_GITHUB_TOKEN_FILE":
 			continue
 		}

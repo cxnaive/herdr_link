@@ -8,9 +8,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 )
 
 const Directory = "herdr-mobile-relay-commands"
@@ -57,6 +57,9 @@ func (m *Manager) apply(action string) State {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	state := State{Instance: m.instance, Profiles: []Profile{}}
+	if runtime.GOOS == "windows" {
+		return state
+	}
 	seen := make(map[string]bool)
 	for _, dir := range m.dirs() {
 		if seen[dir] {
@@ -71,7 +74,7 @@ func (m *Manager) apply(action string) State {
 }
 
 func regular(root *os.Root, name string) ([]byte, os.FileMode, error) {
-	f, err := root.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	f, err := openRegular(root, name)
 	if err != nil {
 		return nil, 0, err
 	}

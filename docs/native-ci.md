@@ -6,6 +6,7 @@
 
 - `check.yml` 按变更组件执行 Go、Shell / 打包工具或前端检查。
 - `build-artifacts.yml` 自动构建受影响的 Relay / Gateway 和 Android，不发布或部署。
+- `relay-windows.yml` 构建 Windows Relay 预览，使用真实 Windows Herdr 和隔离 Gateway／客户端进行原生集成测试；成功后上传 7 天有效的 Actions 附件，不加入正式 Release。
 - `desktop-windows.yml` / `desktop-linux.yml` / `desktop-macos.yml` 在相关变更时验证并生成平台预览包，也可被统一发布构建复用。
 - 完整 race、浏览器和设备资格验证手动运行 `check.yml`，设置 `full=true`，不强制每次 push 都运行。
 

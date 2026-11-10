@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/localipc"
 	"net"
 	"strings"
 	"sync"
@@ -82,7 +83,7 @@ func (c *socketAPIClient) requestUnary(
 	}
 	defer cancel()
 
-	conn, err := (&net.Dialer{}).DialContext(requestCtx, "unix", c.path)
+	conn, err := localipc.DialContext(requestCtx, "unix", c.path)
 	if err != nil {
 		return nil, false, fmt.Errorf("connect to Herdr socket API: %w", err)
 	}
@@ -234,7 +235,7 @@ func (c *socketAPIClient) connect(ctx context.Context) error {
 	if c.conn != nil {
 		return nil
 	}
-	conn, err := (&net.Dialer{}).DialContext(ctx, "unix", c.path)
+	conn, err := localipc.DialContext(ctx, "unix", c.path)
 	if err != nil {
 		return fmt.Errorf("connect to Herdr socket API: %w", err)
 	}

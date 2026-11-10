@@ -481,6 +481,9 @@ func (m *Manager) token() string {
 }
 
 func (m *Manager) eligibility() (bool, string, string) {
+	if runtime.GOOS == "windows" {
+		return false, "unsupported", "Windows preview updates use CI packages; stop Relay and replace its package, preserving configuration"
+	}
 	if !semverPattern.MatchString(m.version) || !validRevision(m.revision) {
 		return false, "unsupported", "Managed updates require a released relay build"
 	}

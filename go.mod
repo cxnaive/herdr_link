@@ -3,6 +3,7 @@ module github.com/0cv/herdr-mobile-relay
 go 1.27.3
 
 require (
+	github.com/Microsoft/go-winio v0.6.2
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/andybalholm/brotli v1.2.7
 	github.com/coder/websocket v1.8.15

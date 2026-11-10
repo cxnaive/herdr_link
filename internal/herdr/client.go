@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/0cv/herdr-mobile-relay/internal/childenv"
@@ -616,6 +616,9 @@ func (c *Client) TabMove(ctx context.Context, tabID string, insertIndex int) err
 }
 
 func (c *Client) PaneRun(ctx context.Context, paneID string, argv []string) error {
+	if runtime.GOOS == "windows" {
+		return &OutcomeError{Started: false, Err: errors.New("Custom POSIX profile launches are unsupported on Windows; use a Herdr agent kind or terminal input")}
+	}
 	if len(argv) == 0 {
 		return errors.New("herdr pane run: empty profile argv")
 	}
@@ -918,7 +921,6 @@ func (c *Client) runCommand(parent context.Context, args ...string) ([]byte, err
 		}
 	}
 	cmd.Env = append(environment, "HERDR_SOCKET_PATH="+c.socketPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	// Process-group termination owns cancellation. WaitDelay is the final
 	// backstop for inherited stdout/stderr descriptors held by a descendant
 	// that escaped the group before cancellation.
@@ -929,9 +931,12 @@ func (c *Client) runCommand(parent context.Context, args ...string) ([]byte, err
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	if err := cmd.Start(); err != nil {
+	cleanup, startErr := startCommand(cmd)
+	if err := startErr; err != nil {
 		return nil, &OutcomeError{Started: false, Err: fmt.Errorf("start: %w", err)}
 	}
+
+	defer cleanup()
 
 	waitCh := make(chan error, 1)
 	go func() {
@@ -981,34 +986,6 @@ func commandResult(stdout, stderr *limitedBuffer, waitErr error) ([]byte, error)
 	return nil, &OutcomeError{Started: true, Err: fmt.Errorf("command failed: %s", diagnostic)}
 }
 
-func terminateProcessGroup(pgid int, waitCh <-chan error) {
-	_ = syscall.Kill(-pgid, syscall.SIGTERM)
-	timer := time.NewTimer(termGrace)
-	defer timer.Stop()
-	leaderDone := false
-	select {
-	case <-waitCh:
-		leaderDone = true
-		if !GroupAlive(pgid) {
-			return
-		}
-		<-timer.C
-	case <-timer.C:
-	}
-	_ = syscall.Kill(-pgid, syscall.SIGKILL)
-
-	if !leaderDone {
-		select {
-		case <-waitCh:
-		case <-time.After(2 * time.Second):
-		}
-	}
-	deadline := time.Now().Add(2 * time.Second)
-	for GroupAlive(pgid) && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
-}
-
 // ShellJoin is equivalent to shlex.join for the POSIX shell grammar used by
 // `herdr pane run`. Only configured profile argv is accepted by PaneRun.
 func ShellJoin(argv []string) string {
@@ -1031,7 +1008,3 @@ func shellQuote(value string) string {
 }
 
 // GroupAlive is exported only for process-boundary tests and diagnostics.
-func GroupAlive(pgid int) bool {
-	err := syscall.Kill(-pgid, 0)
-	return err == nil || errors.Is(err, syscall.EPERM)
-}

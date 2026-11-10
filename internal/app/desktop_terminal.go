@@ -25,7 +25,7 @@ type desktopTerminal struct {
 }
 
 func desktopTerminalAvailable(status herdr.ServerStatus) bool {
-	return (runtime.GOOS == "linux" || runtime.GOOS == "darwin") && status.ServerProtocolKnown && status.ServerProtocol == directterminal.ProtocolVersion
+	return (runtime.GOOS == "linux" || runtime.GOOS == "darwin" || runtime.GOOS == "windows") && status.ServerProtocolKnown && status.ServerProtocol == directterminal.ProtocolVersion
 }
 
 func (s *Server) desktopTerminalCurrent(ctx context.Context, client *transport.ClientConn, in protocol.Inbound) bool {
@@ -59,7 +59,7 @@ func (s *Server) handleDesktopTerminal(ctx context.Context, client *transport.Cl
 		return
 	}
 	if in.Type == "terminal_open" {
-		if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		if runtime.GOOS != "linux" && runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
 			fail("此 Relay 主机暂不支持原生终端桥接")
 			return
 		}

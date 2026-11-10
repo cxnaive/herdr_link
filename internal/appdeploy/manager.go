@@ -73,6 +73,9 @@ func NewManager(runtimeDir, webRoot, version, revision string) *Manager {
 	} else {
 		manager.webHash = manifest.WebHash
 	}
+	if runtime.GOOS == "windows" {
+		manager.reason = "Managed web deployment is not supported on Windows"
+	}
 	if manager.branch == "" {
 		manager.branch = "main"
 	}

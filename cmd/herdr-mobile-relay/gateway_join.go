@@ -25,7 +25,7 @@ func runGatewayJoin(args []string, input io.Reader, output io.Writer) (int, erro
 	}
 	if *file != "" {
 		info, err := os.Lstat(*file)
-		if err != nil || !info.Mode().IsRegular() || !privatepath.Owned(info) || info.Mode().Perm()&0077 != 0 {
+		if err != nil || !info.Mode().IsRegular() || !privatepath.Private(*file, info) {
 			return 1, errors.New("code file must be a private regular file (0600)")
 		}
 		f, err := os.Open(*file)

@@ -40,7 +40,7 @@ func privateFile(path string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !st.Mode().IsRegular() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+	if !st.Mode().IsRegular() || !privatepath.Private(path, st) {
 		return nil, errors.New("gateway credential file must be a private regular file (0600)")
 	}
 	f, err := os.Open(path)
@@ -87,7 +87,7 @@ func LoadLocal(runtime string) (LocalAccess, error) {
 }
 func writePrivate(path string, value any) error {
 	if st, err := os.Lstat(path); err == nil {
-		if !st.Mode().IsRegular() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+		if !st.Mode().IsRegular() || !privatepath.Private(path, st) {
 			return ErrEnrollment
 		}
 	} else if !os.IsNotExist(err) {
@@ -102,7 +102,7 @@ func writePrivate(path string, value any) error {
 		return err
 	}
 	defer os.Remove(f.Name())
-	if err = f.Chmod(0600); err == nil {
+	if err = privatepath.Protect(f.Name(), 0600); err == nil {
 		_, err = f.Write(append(data, '\n'))
 	}
 	if err == nil {
@@ -123,7 +123,7 @@ func writePrivate(path string, value any) error {
 		return err
 	}
 	defer dir.Close()
-	return dir.Sync()
+	return privatepath.SyncDir(dir)
 }
 func Join(ctx context.Context, raw, runtime, configuredKey string) (LocalAccess, error) {
 	code, err := Parse(raw, time.Now())
@@ -137,12 +137,12 @@ func Join(ctx context.Context, raw, runtime, configuredKey string) (LocalAccess,
 		return LocalAccess{}, err
 	}
 	st, err := os.Lstat(runtime)
-	if err != nil || !st.IsDir() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+	if err != nil || !st.IsDir() || !privatepath.Private(runtime, st) {
 		return LocalAccess{}, errors.New("Relay runtime directory must be private (0700)")
 	}
 	lockPath := filepath.Join(runtime, ".gateway-join.lock")
 	if st, err := os.Lstat(lockPath); err == nil {
-		if !st.Mode().IsRegular() || !privatepath.Owned(st) || st.Mode().Perm()&0077 != 0 {
+		if !st.Mode().IsRegular() || !privatepath.Private(lockPath, st) {
 			return LocalAccess{}, ErrEnrollment
 		}
 	} else if !os.IsNotExist(err) {

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 )
 
 const ownershipLimit = 1024
@@ -43,8 +42,7 @@ func (r *Resolver) SetOwnershipPath(path string) error {
 		r.ownershipUnavailable = true
 		return err
 	}
-	stat, owned := info.Sys().(*syscall.Stat_t)
-	if !owned || stat.Uid != uint32(os.Geteuid()) || stat.Nlink != 1 || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 || info.Size() > 1024*1024 {
+	if !ownershipFileSafe(path, info) || info.Size() > 1024*1024 {
 		r.ownershipUnavailable = true
 		return errors.New("profile ownership file must be private, regular and bounded")
 	}
@@ -221,5 +219,5 @@ func (r *Resolver) persistOwnershipLocked() error {
 		return err
 	}
 	defer directory.Close()
-	return directory.Sync()
+	return syncOwnershipDirectory(directory)
 }

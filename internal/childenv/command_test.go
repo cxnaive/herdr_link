@@ -46,3 +46,10 @@ func TestCommandsIsolateReleaseCredentials(t *testing.T) {
 		t.Fatal("cancelled child started")
 	}
 }
+
+func TestReleaseCredentialFilterIsCaseInsensitive(t *testing.T) {
+	got := WithoutReleaseCredentials([]string{"gh_token=secret", "Github_Token=secret", "herdr_github_token_file=private", "Path=preserved"})
+	if !reflect.DeepEqual(got, []string{"Path=preserved"}) {
+		t.Fatal("Windows case-insensitive environment leaked a release credential")
+	}
+}

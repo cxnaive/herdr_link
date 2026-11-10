@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	relayrelease "github.com/0cv/herdr-mobile-relay/internal/release"
@@ -116,7 +115,7 @@ func (w Worker) Run(ctx context.Context, jobPath string) error {
 		return failStartup(err)
 	}
 	defer func() {
-		_ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+		unlockFile(lock)
 		_ = lock.Close()
 	}()
 	state.State = "preparing"
@@ -207,16 +206,17 @@ func runCommandContext(ctx context.Context, command *exec.Cmd) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.WaitDelay = processWaitDelay
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	command.Stdout = stdout
 	command.Stderr = stderr
-	if err := command.Start(); err != nil {
+	cleanup, startErr := startCommand(command)
+	if err := startErr; err != nil {
 		return nil, err
 	}
 
+	defer cleanup()
 	waitCh := make(chan error, 1)
 	go func() {
 		waitCh <- command.Wait()
@@ -236,41 +236,6 @@ func combinedCommandOutput(stdout, stderr *bytes.Buffer) []byte {
 	output := make([]byte, 0, stdout.Len()+stderr.Len())
 	output = append(output, stdout.Bytes()...)
 	return append(output, stderr.Bytes()...)
-}
-
-func terminateProcessGroup(pgid int, waitCh <-chan error) bool {
-	_ = syscall.Kill(-pgid, syscall.SIGTERM)
-	timer := time.NewTimer(processTermGrace)
-	defer timer.Stop()
-	waitCompleted := false
-	select {
-	case <-waitCh:
-		waitCompleted = true
-		if !processGroupAlive(pgid) {
-			return true
-		}
-		<-timer.C
-	case <-timer.C:
-	}
-	_ = syscall.Kill(-pgid, syscall.SIGKILL)
-
-	if !waitCompleted {
-		select {
-		case <-waitCh:
-			waitCompleted = true
-		case <-time.After(processWaitDelay):
-		}
-	}
-	deadline := time.Now().Add(processTermGrace)
-	for processGroupAlive(pgid) && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
-	return waitCompleted
-}
-
-func processGroupAlive(pgid int) bool {
-	err := syscall.Kill(-pgid, 0)
-	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
 func environmentWith(key, value string) []string {
@@ -452,21 +417,6 @@ func verifyHealth(ctx context.Context, healthURL string, manifest relayrelease.M
 		case <-ticker.C:
 		}
 	}
-}
-
-func acquireLock(filename string) (*os.File, error) {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o600)
-	if err != nil {
-		return nil, err
-	}
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		file.Close()
-		return nil, ErrConcurrent
-	}
-	_ = file.Truncate(0)
-	_, _ = fmt.Fprintf(file, "%d\n", os.Getpid())
-	_ = file.Sync()
-	return file, nil
 }
 
 func writeState(filename string, state State) error {

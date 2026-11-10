@@ -168,6 +168,8 @@ set -a; . "$HERDR_RELAY_ENV"; set +a
 完整包包含可执行文件、配置和服务模板。按系统架构选择 amd64（x86_64）或 arm64（aarch64）。macOS 服务端目前只有 CI 独立二进制。
 <!-- native-downloads:end -->
 
+Windows 原生 Relay 的 CI 预览、安装步骤和功能限制见 [Windows Relay](docs/windows-relay.md)。通过 `relay-windows` 的成功 CI 附件获取；尚未加入正式 Release。
+
 ## Clients
 
 各客户端都通过 Relay 获取对话、终端、审批与文件；多电脑按“电脑 → 工作空间 → Agent”组织。客户端中的电脑名称是自己的备注，不改变 Relay 身份，也不与 Gateway 的管理备注自动同步。

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/localipc"
 	"io"
 	"net"
 	"sort"
@@ -130,7 +131,7 @@ type EventClient struct {
 func NewEventClient(path string) *EventClient {
 	return &EventClient{
 		path:        path,
-		dialContext: (&net.Dialer{}).DialContext,
+		dialContext: localipc.DialContext,
 	}
 }
 
@@ -138,7 +139,7 @@ func (c *EventClient) dial(ctx context.Context, network, address string) (net.Co
 	if c.dialContext != nil {
 		return c.dialContext(ctx, network, address)
 	}
-	return (&net.Dialer{}).DialContext(ctx, network, address)
+	return localipc.DialContext(ctx, network, address)
 }
 
 func (c *EventClient) SetWorkspaceReorderedProbe(probe func() bool) {

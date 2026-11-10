@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/0cv/herdr-mobile-relay/internal/childenv"
@@ -207,15 +206,17 @@ func runCommandContext(ctx context.Context, command *exec.Cmd) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.WaitDelay = processWaitDelay
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	command.Stdout = stdout
 	command.Stderr = stderr
-	if err := command.Start(); err != nil {
+	cleanup, startErr := startCommand(command)
+	if err := startErr; err != nil {
 		return nil, err
 	}
+
+	defer cleanup()
 
 	waitCh := make(chan error, 1)
 	go func() {
@@ -234,39 +235,6 @@ func combinedCommandOutput(stdout, stderr *bytes.Buffer) []byte {
 	output := make([]byte, 0, stdout.Len()+stderr.Len())
 	output = append(output, stdout.Bytes()...)
 	return append(output, stderr.Bytes()...)
-}
-
-func terminateProcessGroup(pgid int, waitCh <-chan error) {
-	_ = syscall.Kill(-pgid, syscall.SIGTERM)
-	timer := time.NewTimer(processTermGrace)
-	defer timer.Stop()
-	leaderDone := false
-	select {
-	case <-waitCh:
-		leaderDone = true
-		if !processGroupAlive(pgid) {
-			return
-		}
-		<-timer.C
-	case <-timer.C:
-	}
-	_ = syscall.Kill(-pgid, syscall.SIGKILL)
-
-	if !leaderDone {
-		select {
-		case <-waitCh:
-		case <-time.After(2 * time.Second):
-		}
-	}
-	deadline := time.Now().Add(2 * time.Second)
-	for processGroupAlive(pgid) && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
-}
-
-func processGroupAlive(pgid int) bool {
-	err := syscall.Kill(-pgid, 0)
-	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
 var cloudflareCredentialKeys = [...]string{
@@ -1162,21 +1130,6 @@ func verifyVersion(data []byte, version, revision string) error {
 		return errors.New("version metadata does not match the expected version and revision")
 	}
 	return nil
-}
-
-func lockFile(filename string) (*os.File, error) {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0o600)
-	if err != nil {
-		return nil, err
-	}
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		file.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil, errDeployLocked
-		}
-		return nil, fmt.Errorf("lock app deployment: %w", err)
-	}
-	return file, nil
 }
 
 func writeState(filename string, state State) error {

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/localipc"
 	"io"
 	"net"
 	"path/filepath"
@@ -38,7 +39,7 @@ func Dial(ctx context.Context, path, terminal string, columns, rows int) (*Strea
 	if terminal == "" || len(terminal) > 256 || !validSize(columns, rows) {
 		return nil, errors.New("invalid terminal target or size")
 	}
-	conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", path)
+	conn, err := localipc.DialContext(ctx, "unix", path)
 	if err != nil {
 		return nil, err
 	}

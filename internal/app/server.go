@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	herdrmobilerelay "github.com/0cv/herdr-mobile-relay"
@@ -1477,11 +1476,11 @@ func (s *Server) Run(ctx context.Context) error {
 	startBackground(func() { s.captureHistoryLoop(ctx) })
 	startBackground(func() { s.paneSizeM.Run(ctx) })
 	profileSignals := make(chan os.Signal, 1)
-	signal.Notify(profileSignals, syscall.SIGHUP)
+	notifyProfileReload(profileSignals)
 	defer signal.Stop(profileSignals)
 	startBackground(func() { s.reloadProfilesLoop(ctx, profileSignals) })
 	bootstrapSignals := make(chan os.Signal, 1)
-	signal.Notify(bootstrapSignals, syscall.SIGUSR1)
+	notifyBootstrap(bootstrapSignals)
 	defer signal.Stop(bootstrapSignals)
 	startBackground(func() { s.armBootstrapLoop(ctx, bootstrapSignals) })
 	if s.udp != nil {

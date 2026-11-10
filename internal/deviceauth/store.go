@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"io"
 	"os"
 	"path/filepath"
@@ -388,7 +389,7 @@ func (s *Store) load() error {
 	if !info.Mode().IsRegular() {
 		return errors.New("device store is not a regular file")
 	}
-	if err := os.Chmod(s.path, 0o600); err != nil {
+	if err := privatepath.Protect(s.path, 0o600); err != nil {
 		return fmt.Errorf("protect device store: %w", err)
 	}
 	file, err := os.Open(s.path)
@@ -430,7 +431,7 @@ func (s *Store) persistLocked() error {
 	}
 	tempPath := temp.Name()
 	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(temp.Name(), 0o600); err != nil {
 		_ = temp.Close()
 		return err
 	}
@@ -448,7 +449,7 @@ func (s *Store) persistLocked() error {
 	if err := os.Rename(tempPath, s.path); err != nil {
 		return err
 	}
-	if err := os.Chmod(s.path, 0o600); err != nil {
+	if err := privatepath.Protect(s.path, 0o600); err != nil {
 		return err
 	}
 	return syncDirectory(s.dir)
@@ -465,7 +466,7 @@ func protectDirectory(dir string) error {
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return errors.New("device store path is not a directory")
 	}
-	if err := os.Chmod(dir, 0o700); err != nil {
+	if err := privatepath.Protect(dir, 0o700); err != nil {
 		return fmt.Errorf("protect device store directory: %w", err)
 	}
 	return nil
@@ -477,7 +478,7 @@ func syncDirectory(dir string) error {
 		return err
 	}
 	defer file.Close()
-	return file.Sync()
+	return privatepath.SyncDir(file)
 }
 
 func ensureJSONEOF(decoder *json.Decoder) error {
