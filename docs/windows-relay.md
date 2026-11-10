@@ -23,6 +23,10 @@
 
 配置目录使用当前用户、SYSTEM 和 Administrators 可访问的受保护 ACL；不依赖 Windows 无效的 POSIX 权限位。`gateway-access.json` 与设备数据库含私密凭据，不上传仓库、不分享给客户端。重复安装不会重建身份或覆盖配置。
 
+若启动报 `bind: An attempt was made to access a socket in a way forbidden by its access permissions`，先用 `netsh interface ipv4 show excludedportrange protocol=tcp` 检查系统保留端口。Hyper-V / WSL 等环境可能保留包含 `8375–8377` 的范围，即使没有进程监听也无法绑定。将 `windows-relay.json` 的 `port`、`plugin_port` 改为可用端口（例如 `28375`、`28376`）；本机测试 Gateway 可使用 `127.0.0.1:28377`。无需管理员权限，也不要删除系统保留范围。
+
+源码工作区从旧版本升级后，若健康日志报告 `file digest does not match its descriptor`，检查 `git ls-files --eol -- web`：`web/**` 必须保留提交的精确字节。旧 checkout 留下的 CRLF 转换不会因新增 `.gitattributes` 自动消失；核对没有本地内容改动后恢复受影响文件的提交字节，或使用全新 checkout / 完整 CI ZIP。不要改发布摘要来匹配损坏的文件。
+
 Relay 保持运行，再开一个 PowerShell：
 
 ```powershell
