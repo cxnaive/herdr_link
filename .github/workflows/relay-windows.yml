@@ -59,7 +59,15 @@ jobs:
       - name: Validate formatting, Windows build and PowerShell syntax
         run: |
           $files = @(git ls-files '*.go' ':!:desktop/**')
-          if (@(gofmt -l @files).Count -ne 0) { throw 'Run gofmt before committing.' }
+          # Checkout may use CRLF. Compare normalized content to Git, in batches
+          # below Windows' process command-line length limit.
+          for ($i = 0; $i -lt $files.Count; $i += 40) {
+            $batch = $files[$i..([Math]::Min($i+39,$files.Count-1))]
+            gofmt -w @batch
+            if ($LASTEXITCODE -ne 0) { throw 'Go formatting failed.' }
+          }
+          git -c core.safecrlf=false diff --exit-code -- '*.go' ':!:desktop/**'
+          if ($LASTEXITCODE -ne 0) { throw 'Run gofmt before committing.' }
           go vet ./cmd/herdr-mobile-relay ./cmd/herdr-gateway ./internal/localipc ./internal/privatepath ./internal/processjob ./tests/windows
           if ($LASTEXITCODE -ne 0) { throw 'Windows vet failed.' }
           Get-ChildItem deploy/windows-relay/*.ps1,scripts/package-windows-relay.ps1 | ForEach-Object {

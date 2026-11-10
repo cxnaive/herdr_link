@@ -169,6 +169,8 @@ func TestNativeWindowsHerdrRelayGatewayAndClient(t *testing.T) {
 	t.Setenv("HERDR_GATEWAY_ADDR", "127.0.0.1:"+freePort(t))
 	t.Setenv("HERDR_GATEWAY_STUN_ADDR", "")
 	t.Setenv("HERDR_GATEWAY_ADMIN_STATE", management)
+	t.Setenv("HERDR_GATEWAY_ADMIN_ADDR", "127.0.0.1:"+freePort(t))
+	t.Setenv("HERDR_GATEWAY_PUBLIC_ENDPOINT", endpoint)
 	start("gateway", gatewayBin)
 	wait("Gateway", func() bool { return healthy("http://"+os.Getenv("HERDR_GATEWAY_ADDR"), nil) })
 	join := childenv.CommandContext(ctx, relayBin, "gateway-join")
