@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -84,7 +85,7 @@ func NewManager(pushDir string, logger *slog.Logger) (*Manager, error) {
 	if err := os.MkdirAll(pushDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create push dir: %w", err)
 	}
-	if err := os.Chmod(pushDir, 0o700); err != nil {
+	if err := privatepath.Protect(pushDir, 0o700); err != nil {
 		return nil, fmt.Errorf("protect push dir: %w", err)
 	}
 
@@ -180,7 +181,7 @@ func (m *Manager) loadOrGenerateVAPIDKeys(pushDir string) error {
 			}
 		}
 
-		if err := os.Chmod(privPath, 0o600); err != nil {
+		if err := privatepath.Protect(privPath, 0o600); err != nil {
 			return fmt.Errorf("protect VAPID private key: %w", err)
 		}
 		m.vapidPrivate = encodeVAPIDPrivate(privateKey)
@@ -1019,7 +1020,7 @@ func atomicWrite(filename string, data []byte, mode os.FileMode) error {
 	}
 	tempName := temp.Name()
 	defer os.Remove(tempName)
-	if err := temp.Chmod(mode); err != nil {
+	if err := privatepath.Protect(temp.Name(), mode); err != nil {
 		temp.Close()
 		return err
 	}
@@ -1039,7 +1040,7 @@ func atomicWrite(filename string, data []byte, mode os.FileMode) error {
 	}
 	parent, err := os.Open(directory)
 	if err == nil {
-		err = parent.Sync()
+		err = privatepath.SyncDir(parent)
 		_ = parent.Close()
 	}
 	return err

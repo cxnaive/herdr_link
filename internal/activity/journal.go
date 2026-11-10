@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"io"
 	"os"
 	"path/filepath"
@@ -81,7 +82,7 @@ func OpenJournal(cacheDir string) (*Journal, error) {
 	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create activity directory: %w", err)
 	}
-	if err := os.Chmod(cacheDir, 0o700); err != nil {
+	if err := privatepath.Protect(cacheDir, 0o700); err != nil {
 		return nil, fmt.Errorf("protect activity directory: %w", err)
 	}
 	journal := &Journal{
@@ -189,7 +190,7 @@ func (j *Journal) Append(entry Entry) error {
 	if err != nil {
 		return fmt.Errorf("open activity journal: %w", err)
 	}
-	if err := file.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(file.Name(), 0o600); err != nil {
 		_ = file.Close()
 		return fmt.Errorf("protect activity journal: %w", err)
 	}
@@ -336,7 +337,7 @@ func (j *Journal) compactEntriesLocked(entries []Entry) error {
 	}
 	tempPath := temp.Name()
 	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(temp.Name(), 0o600); err != nil {
 		_ = temp.Close()
 		return err
 	}
@@ -393,7 +394,7 @@ func (j *Journal) loadTombstones() (map[string]struct{}, error) {
 	if info.Size() > maxBytes {
 		return nil, fmt.Errorf("activity tombstones are corrupt or oversized: %d bytes", info.Size())
 	}
-	if err := file.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(file.Name(), 0o600); err != nil {
 		return nil, fmt.Errorf("protect activity tombstones: %w", err)
 	}
 	scanner := bufio.NewScanner(file)
@@ -431,7 +432,7 @@ func (j *Journal) writeTombstonesLocked(tombstones map[string]struct{}) error {
 	}
 	tempPath := temp.Name()
 	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(temp.Name(), 0o600); err != nil {
 		_ = temp.Close()
 		return err
 	}
@@ -474,7 +475,7 @@ func syncDirectory(path string) error {
 		return err
 	}
 	defer directory.Close()
-	err = directory.Sync()
+	err = privatepath.SyncDir(directory)
 	if errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.ENOTSUP) || errors.Is(err, syscall.ENOSYS) {
 		return nil
 	}

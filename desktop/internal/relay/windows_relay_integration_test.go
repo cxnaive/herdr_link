@@ -144,15 +144,19 @@ func TestWindowsRelayEndToEnd(t *testing.T) {
 	}
 	defer term.Close()
 	term.Start(nil)
-	output := make(chan string, 1)
+	output := make(chan string, 8)
 	go func() {
-		b := make([]byte, 65536)
-		n, e := term.Read(b)
-		if e != nil {
-			output <- ""
-			return
+		for {
+			b := make([]byte, 65536)
+			n, e := term.Read(b)
+			if e != nil {
+				return
+			}
+			select {
+			case output <- string(b[:n]):
+			default:
+			}
 		}
-		output <- string(b[:n])
 	}()
 	select {
 	case text := <-output:
@@ -162,7 +166,20 @@ func TestWindowsRelayEndToEnd(t *testing.T) {
 	case <-time.After(8 * time.Second):
 		t.Fatal("native terminal did not render")
 	}
-	if _, err = term.Write([]byte("echo CI_NATIVE_TERMINAL\r")); err != nil {
+	if _, err = term.Write([]byte("set /a 1400+38\r")); err != nil {
 		t.Fatal("native terminal input", err)
 	}
+	deadline := time.NewTimer(10 * time.Second)
+	defer deadline.Stop()
+	for {
+		select {
+		case text := <-output:
+			if strings.Contains(text, "1438") {
+				return
+			}
+		case <-deadline.C:
+			t.Fatal("native terminal input did not execute")
+		}
+	}
+
 }

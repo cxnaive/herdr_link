@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"io"
 	"os"
 	"path/filepath"
@@ -46,7 +47,7 @@ func Open(cacheDir string) (*Logger, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("create audit directory: %w", err)
 	}
-	if err := os.Chmod(dir, 0o700); err != nil {
+	if err := privatepath.Protect(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("protect audit directory: %w", err)
 	}
 	logger := &Logger{dir: dir, path: filepath.Join(dir, "remote-writes.jsonl")}
@@ -54,7 +55,7 @@ func Open(cacheDir string) (*Logger, error) {
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
 			return nil, errors.New("audit path is not a regular file")
 		}
-		if err := os.Chmod(logger.path, 0o600); err != nil {
+		if err := privatepath.Protect(logger.path, 0o600); err != nil {
 			return nil, fmt.Errorf("protect audit file: %w", err)
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -130,7 +131,7 @@ func (l *Logger) openAppendFile() (*os.File, error) {
 				_ = file.Close()
 				return nil, errors.New("new audit path is not a regular file")
 			}
-			if chmodErr := file.Chmod(0o600); chmodErr != nil {
+			if chmodErr := privatepath.Protect(file.Name(), 0o600); chmodErr != nil {
 				_ = file.Close()
 				return nil, fmt.Errorf("protect audit file: %w", chmodErr)
 			}
@@ -158,7 +159,7 @@ func (l *Logger) openAppendFile() (*os.File, error) {
 			_ = file.Close()
 			return nil, errors.New("audit file changed while it was opening")
 		}
-		if chmodErr := file.Chmod(0o600); chmodErr != nil {
+		if chmodErr := privatepath.Protect(file.Name(), 0o600); chmodErr != nil {
 			_ = file.Close()
 			return nil, fmt.Errorf("protect audit file: %w", chmodErr)
 		}
@@ -200,7 +201,7 @@ func (l *Logger) rotateIfNeeded(nextBytes int64) error {
 	if err != nil {
 		return fmt.Errorf("open audit directory: %w", err)
 	}
-	syncErr := directory.Sync()
+	syncErr := privatepath.SyncDir(directory)
 	closeErr := directory.Close()
 	if syncErr != nil || closeErr != nil {
 		return fmt.Errorf("sync audit rotation: %w", errors.Join(syncErr, closeErr))

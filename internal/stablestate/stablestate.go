@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -248,7 +249,7 @@ func Write(filename string, state map[string]any) error {
 	}
 	dir, err := os.Open(directory)
 	if err == nil {
-		err = dir.Sync()
+		err = privatepath.SyncDir(dir)
 		_ = dir.Close()
 	}
 	return err

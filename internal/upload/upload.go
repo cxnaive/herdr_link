@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"hash"
 	"io"
 	"io/fs"
@@ -264,7 +265,7 @@ func NewManager(config Config) (*Manager, error) {
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, failure("upload_root_unsafe", nil)
 	}
-	if err := os.Chmod(cleanRoot, 0o700); err != nil {
+	if err := privatepath.Protect(cleanRoot, 0o700); err != nil {
 		return nil, failure("upload_root_unavailable", nil)
 	}
 	root, err := os.OpenRoot(cleanRoot)
@@ -915,7 +916,7 @@ func (m *Manager) persistAttachments() error {
 	}
 	tempPath := temp.Name()
 	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(temp.Name(), 0o600); err != nil {
 		_ = temp.Close()
 		return failure("upload_metadata_unavailable", nil)
 	}
@@ -939,7 +940,7 @@ func (m *Manager) persistAttachments() error {
 		return &attachmentIndexPublishedError{err: failure("upload_metadata_unavailable", nil)}
 	}
 	defer directory.Close()
-	if err := directory.Sync(); err != nil {
+	if err := privatepath.SyncDir(directory); err != nil {
 		return &attachmentIndexPublishedError{err: failure("upload_metadata_unavailable", nil)}
 	}
 	return nil
@@ -951,7 +952,7 @@ func (m *Manager) syncObjectsDirectory() error {
 		return failure("upload_metadata_unavailable", nil)
 	}
 	defer directory.Close()
-	if err := directory.Sync(); err != nil {
+	if err := privatepath.SyncDir(directory); err != nil {
 		return failure("upload_metadata_unavailable", nil)
 	}
 	return nil

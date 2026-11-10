@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"io"
 	"net/http"
 	"net/url"
@@ -455,7 +456,7 @@ func writeState(filename string, state State) error {
 	}
 	dir, err := os.Open(directory)
 	if err == nil {
-		err = dir.Sync()
+		err = privatepath.SyncDir(dir)
 		_ = dir.Close()
 	}
 	return err

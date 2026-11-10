@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"io"
 	"os"
 	"path/filepath"
@@ -50,7 +51,7 @@ func Write(runtimeDir string, snapshot Snapshot) error {
 	}
 	tempPath := temp.Name()
 	defer os.Remove(tempPath)
-	if err := temp.Chmod(0o600); err != nil {
+	if err := privatepath.Protect(temp.Name(), 0o600); err != nil {
 		_ = temp.Close()
 		return err
 	}
@@ -72,7 +73,7 @@ func Write(runtimeDir string, snapshot Snapshot) error {
 		return err
 	}
 	if directory, err := os.Open(runtimeDir); err == nil {
-		_ = directory.Sync()
+		_ = privatepath.SyncDir(directory)
 		_ = directory.Close()
 	}
 	return nil

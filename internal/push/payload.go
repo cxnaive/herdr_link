@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0cv/herdr-mobile-relay/internal/privatepath"
 	"os"
 	"strings"
 	"time"
@@ -45,7 +46,7 @@ func loadOrCreateReferenceSigner(path string) (*ReferenceSigner, error) {
 		if len(key) != 32 {
 			return nil, errors.New("push_invalid_reference_key")
 		}
-		if err := os.Chmod(path, 0o600); err != nil {
+		if err := privatepath.Protect(path, 0o600); err != nil {
 			return nil, fmt.Errorf("protect push reference key: %w", err)
 		}
 		return &ReferenceSigner{key: key}, nil
