@@ -28,7 +28,7 @@ class ZoomImageView(context: Context) : View(context) {
             if (!scaleDetector.isInProgress && e2.pointerCount == 1) { viewport.pan(-dx, -dy); invalidate() }; return true
         }
     })
-    init { setBackgroundColor(0xff0b141b.toInt()); isFocusable = true; contentDescription = "文档图像，双指缩放、单指拖动、双击放大或还原" }
+    init { setBackgroundColor(AgentStyle.background); isFocusable = true; contentDescription = "文档图像，双指缩放、单指拖动、双击放大或还原" }
     fun setBitmap(value: Bitmap?, reset: Boolean = true) {
         bitmap = value
         if (value != null) viewport.size(width.toFloat(), height.toFloat(), value.width.toFloat(), value.height.toFloat(), reset)

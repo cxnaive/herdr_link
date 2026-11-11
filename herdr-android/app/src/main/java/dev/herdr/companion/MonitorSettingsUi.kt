@@ -27,7 +27,7 @@ object MonitorSettingsUi {
             append("\n\n电池优化：${if (exempt) "已允许不优化" else "仍受优化限制，锁屏可能延迟"}。请在系统电池设置允许 Herdr Pocket 后台运行，并按手机厂商要求允许自启动。强行停止、重启手机或断网期间不能保证实时通知；重启后请打开 App。")
         }
         val body = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; val p = (20 * resources.displayMetrics.density).toInt(); setPadding(p, p / 2, p, 0) }
-        val soundStatus = TextView(activity).apply { textSize = 14f; setTextColor(0xffe8f0f2.toInt()) }
+        val soundStatus = TextView(activity).apply { textSize = 14f; setTextColor(AgentStyle.ink) }
         fun updateSoundStatus() { soundStatus.text = activity.getString(R.string.monitor_sound_status, MonitorNotifications.completionSoundStatus(activity)) }
         updateSoundStatus(); body.addView(soundStatus)
         body.addView(Button(activity).apply {
@@ -41,7 +41,7 @@ object MonitorSettingsUi {
             this.text = "完成提醒声音与弹出设置"; isAllCaps = false
             setOnClickListener { openCompletionSettings(activity) }
         }, LinearLayout.LayoutParams(-1, -2))
-        body.addView(TextView(activity).apply { this.text = text; textSize = 14f; setTextColor(0xffe8f0f2.toInt()) })
+        body.addView(TextView(activity).apply { this.text = text; textSize = 14f; setTextColor(AgentStyle.ink) })
         val dialog = AlertDialog.Builder(activity).setTitle("常驻监控 / 完成提醒").setView(android.widget.ScrollView(activity).apply { addView(body) })
             .setPositiveButton(if (enabled) "停止监控" else "开启常驻监控") { _, _ -> if (enabled) { AgentMonitorService.stop(activity); changed() } else enable() }
             .setNeutralButton("系统设置") { _, _ ->

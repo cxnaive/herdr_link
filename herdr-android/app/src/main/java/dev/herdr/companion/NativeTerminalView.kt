@@ -46,7 +46,7 @@ class NativeTerminalView(context: Context) : View(context) {
         return TerminalEmulator(sink, columns, rows, ceil(cellWidth).toInt(), lineHeight, (rows + 16).coerceAtLeast(100), silent)
     }
     init {
-        setBackgroundColor(AgentStyle.background)
+        setBackgroundColor(AgentStyle.terminalBackground)
         contentDescription = "原生终端输出，可横向和纵向滚动"
     }
     private fun px() = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, size, resources.displayMetrics).roundToInt().coerceAtLeast(1)

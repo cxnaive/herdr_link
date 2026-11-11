@@ -6,6 +6,7 @@ project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Choose from five Android interface palettes in Devices → Theme colors, keeping the original mint-dark default and adding midnight blue, graphite purple, cloud blue and warm paper. Preview before applying and remember the choice locally without reconnecting or losing drafts; terminal output keeps its dark background.
 - Operate current Pi selectors and input dialogs, OMP approval/Ask dialogs, and native HTML forms through exact-target controls. HTML fields stay in the upstream form: insert text, move between fields, and explicitly submit only at the final control; hidden/private input and unrecognized layouts remain terminal-only.
 - Bind native Windows x64 Codex terminals to their verified sessions, enabling structured history, prompts, approvals and run state. Shared runtimes also support model/reasoning settings; embedded runtimes retain their terminal-only settings interface.
 

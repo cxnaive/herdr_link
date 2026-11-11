@@ -113,17 +113,27 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
     private var uploading = false
     private var uploadId = ""
     private var uiDraft = ""
-    private val textInk = AgentStyle.ink
-    private val muted = AgentStyle.muted
-    private val surface = AgentStyle.panel
-    private val accent = AgentStyle.accent
-    private val renderMarkdown = Markwon.builder(context).usePlugin(PocketMarkdown(context))
-        .usePlugin(CodexFileCitations.plugin())
-        .usePlugin(TablePlugin.create(context))
-        .usePlugin(StrikethroughPlugin.create())
-        .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
-            override fun configureConfiguration(builder: io.noties.markwon.MarkwonConfiguration.Builder) { builder.linkResolver { _, link -> openReviewLink(link) } }
-        }).build()
+    private val textInk get() = AgentStyle.ink
+    private val muted get() = AgentStyle.muted
+    private val surface get() = AgentStyle.panel
+    private val accent get() = AgentStyle.accent
+    private var markdownTheme: PocketTheme? = null
+    private var markdownRenderer: Markwon? = null
+    private val renderMarkdown: Markwon
+        get() {
+            val existing = markdownRenderer
+            if (existing != null && markdownTheme == PocketAppearance.current) return existing
+            val built = Markwon.builder(context).usePlugin(PocketMarkdown(context))
+                .usePlugin(CodexFileCitations.plugin())
+                .usePlugin(TablePlugin.create(context))
+                .usePlugin(StrikethroughPlugin.create())
+                .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
+                    override fun configureConfiguration(builder: io.noties.markwon.MarkwonConfiguration.Builder) { builder.linkResolver { _, link -> openReviewLink(link) } }
+                }).build()
+            markdownTheme = PocketAppearance.current
+            markdownRenderer = built
+            return built
+        }
 
     fun attach(container: FrameLayout) { host = container; active = true; render() }
     fun pause() { rememberConversation(); saveDraft(); active = false; updateImageAvailability(); stopStreams(); detailVisibility(false) }
