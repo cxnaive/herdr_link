@@ -36,7 +36,7 @@
 | 预览 | Markdown、源码、图片、内嵌 PDF；Markdown 相对链接/标题锚点，图片放大 | `files.go`、`media.go` |
 | 下载 | 系统保存对话框、原文件分块下载、版本/散列校验、进度和取消 | `internal/relay/files.go` |
 | 原生终端 | 键盘、鼠标、中文、复制和尺寸同步，连接当前远端 Agent | `internal/relay/terminal.go` |
-| 桌面外观 | 应用与终端独立深浅色、跟随系统/应用，本机保存；终端默认柔和深色并校正低对比文字；浅色 Codex 深灰背景可柔化，其他 Agent 保持原背景，切换不重连 | `appearance.go` |
+| 桌面外观 | 应用新增 Android 同款五套配色；应用与终端独立深浅色、跟随系统/应用，本机保存；终端默认柔和深色并校正低对比文字；浅色 Codex 深灰背景可柔化，其他 Agent 保持原背景，切换不重连 | `appearance.go`、`appearance_palettes.go` |
 
 ## 仍未对齐与明确限制
 

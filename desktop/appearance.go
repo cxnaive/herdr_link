@@ -17,7 +17,9 @@ func (p appearanceSettings) normalized() appearanceSettings {
 	switch p.Application {
 	case "system", "light", "dark":
 	default:
-		p.Application = "system"
+		if _, ok := findInterfacePalette(p.Application); !ok {
+			p.Application = "system"
+		}
 	}
 	switch p.Terminal {
 	case "application", "light", "dark":
@@ -27,6 +29,9 @@ func (p appearanceSettings) normalized() appearanceSettings {
 	return p
 }
 func (p appearanceSettings) appDark(systemDark bool) bool {
+	if palette, ok := findInterfacePalette(p.Application); ok {
+		return palette.dark
+	}
 	switch p.normalized().Application {
 	case "light":
 		return false
@@ -152,9 +157,18 @@ func (a *application) changeAppearance(p appearanceSettings) {
 	a.appearanceMessage = ""
 	a.applyAppearance()
 }
+func (p appearanceSettings) themeSource() mygo.ThemeSource {
+	if palette, ok := findInterfacePalette(p.Application); ok {
+		if palette.dark {
+			return mygo.ThemeDark
+		}
+		return mygo.ThemeLight
+	}
+	return mygo.ThemeSource(p.normalized().Application)
+}
 func (a *application) applyAppearance() {
 	if a.win != nil {
-		mygo.Theme.SetSource(mygo.ThemeSource(a.appearance.normalized().Application))
+		mygo.Theme.SetSource(a.appearance.themeSource())
 		if a.appearance.normalized().Application == "system" {
 			a.systemDark = mygo.Theme.IsDark()
 		}
@@ -200,6 +214,9 @@ func (a *application) interfaceTheme(base *ui.Theme) *ui.Theme {
 		theme.Selection = ui.Hex("#cfdfd4")
 		theme.Focus = ui.Hex("#386c56")
 	}
+	if palette, ok := findInterfacePalette(a.appearance.Application); ok {
+		palette.apply(&theme)
+	}
 	theme.FontSize = 14
 	theme.Radius = 8
 	return &theme
@@ -231,7 +248,13 @@ func (a *application) appearanceView(c *ui.Context) {
 			}
 		})
 		p := a.appearance
-		appearanceChoice(c, "应用主题", &p.Application, []string{"system", "light", "dark"}, []string{"跟随系统", "柔和浅色", "柔和深色"})
+		ids, labels := []string{"system", "light", "dark"}, []string{"跟随系统", "柔和浅色", "柔和深色"}
+		for _, palette := range interfacePalettes {
+			ids = append(ids, palette.id)
+			labels = append(labels, palette.label)
+		}
+		appearanceChoice(c, "应用主题", &p.Application, ids, labels)
+		ui.Text(c, "本机保存，立即生效；不影响连接、草稿或远端设置。").FontSize(12).TextColor(c.Theme().TextMuted).Wrap()
 		appearanceChoice(c, "终端配色", &p.Terminal, []string{"dark", "light", "application"}, []string{"柔和深色", "柔和浅色", "跟随应用"})
 		enhance := !p.OriginalColors
 		ui.Checkbox(c, &enhance, "增强终端文字对比度")

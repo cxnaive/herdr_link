@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/cxnaive/herdr-desktop/internal/relay"
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/herdr-terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -367,5 +368,125 @@ func TestSoftBackgroundTracksAttachedAgentKind(t *testing.T) {
 	}
 	if !bytes.Equal(before, term.Snapshot()) {
 		t.Fatal("provider update changed terminal state")
+	}
+}
+
+func TestSharedInterfacePalettesKeepModesAndReadableColors(t *testing.T) {
+	a := newApplication(true)
+	defer a.cancel()
+	for _, palette := range interfacePalettes {
+		t.Run(palette.id, func(t *testing.T) {
+			for _, system := range []bool{false, true} {
+				a.systemDark = system
+				a.appearance = appearanceSettings{Application: palette.id, Terminal: "dark"}.normalized()
+				if a.appearance.Application != palette.id || a.appearance.appDark(system) != palette.dark || !a.appearance.terminalDark(system) {
+					t.Fatal("palette did not preserve explicit modes")
+				}
+				want := mygo.ThemeLight
+				if palette.dark {
+					want = mygo.ThemeDark
+				}
+				if a.appearance.themeSource() != want {
+					t.Fatal("native window controls use the wrong mode")
+				}
+				p := a.appearance
+				p.Terminal = "application"
+				if p.terminalDark(system) != palette.dark {
+					t.Fatal("terminal follow-application ignored palette")
+				}
+			}
+			theme := a.interfaceTheme(ui.LightTheme())
+			if theme.Background != ui.Hex(palette.background) || theme.Dark != palette.dark {
+				t.Fatal("interface did not adopt palette")
+			}
+			contrast := func(fg, bg ui.Color) float64 {
+				l1 := luminance(color.NRGBA{R: fg.R, G: fg.G, B: fg.B, A: 255})
+				l2 := luminance(color.NRGBA{R: bg.R, G: bg.G, B: bg.B, A: 255})
+				return (max(l1, l2) + .05) / (min(l1, l2) + .05)
+			}
+			for _, bg := range []ui.Color{theme.Background, theme.Surface, theme.SurfaceHover, theme.SurfacePressed} {
+				for _, fg := range []ui.Color{theme.Text, theme.TextMuted, theme.Accent, theme.Warning, theme.Danger} {
+					if ratio := contrast(fg, bg); ratio < 4.5 {
+						t.Fatalf("unreadable text/status contrast: %.2f", ratio)
+					}
+				}
+			}
+			for _, bg := range []ui.Color{theme.Accent, theme.AccentHover, theme.AccentPressed} {
+				if ratio := contrast(theme.AccentText, bg); ratio < 4.5 {
+					t.Fatalf("unreadable primary control: %.2f", ratio)
+				}
+			}
+		})
+	}
+	if (appearanceSettings{Application: "missing"}).normalized().Application != "system" {
+		t.Fatal("invalid preference did not retain system fallback")
+	}
+}
+
+func TestSharedPaletteControlsPersistWithoutReplacingSessionOrDraft(t *testing.T) {
+	a, m, chat := managementFixture(t)
+	a.demo = false
+	term := appearanceTerminal(t, a, "codex")
+	m.term, m.termIdentity = term, m.agents[0].Identity()
+	term.Feed([]byte("\x1b[?25l\x1b[31mred ANSI\x1b[0m retained terminal"))
+	original := term.Text()
+	session, target := m.session, chat.agent.Target
+	chat.draft, chat.uncertain = "配色切换不能清除草稿", true
+	key := operationKey(m, chat.agent)
+	if err := a.store.saveDraft(key, chat.draft, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.setOperation(key, "agent_restart"); err != nil {
+		t.Fatal(err)
+	}
+	tt := ui.NewTester(a.view, 1280, 840)
+	for index, palette := range interfacePalettes {
+		if err := tt.Click("外观"); err != nil {
+			t.Fatal(err)
+		}
+		if err := tt.Click("选择应用主题"); err != nil {
+			t.Fatal(err)
+		}
+		steps := 1
+		if index == 0 {
+			steps = 3 // system, light, dark, mint
+		}
+		for range steps {
+			tt.Key(0, ui.KeyDown)
+		}
+		tt.Key(0, ui.KeyEnter)
+		if a.appearance.Application != palette.id || a.store.appearance().Application != palette.id {
+			t.Fatal("selection was not persisted", palette.id, a.appearance)
+		}
+		var saved savedState
+		if err := a.store.vault.Load(&saved); err != nil || saved.Appearance != a.appearance {
+			t.Fatal("palette was not saved to the encrypted local store", err)
+		}
+		if m.term != term || term.Text() != original || a.terminalTheme() != softDarkTerminal || m.session != session || chat.agent.Target != target {
+			t.Fatal("palette switch altered terminal, session or target")
+		}
+		if draft, uncertain := a.store.draft(key); draft != chat.draft || !uncertain || !chat.uncertain || a.store.operations()[key] != "agent_restart" {
+			t.Fatal("palette switch lost draft or delivery/operation state")
+		}
+		if dir := os.Getenv("HERDR_APPEARANCE_SCREENSHOTS"); dir != "" {
+			save := func(name string) {
+				t.Helper()
+				f, err := os.Create(filepath.Join(dir, name+".png"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+				if err := png.Encode(f, tt.Image()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			save(palette.id + "-picker")
+			if err := tt.Click("完成"); err != nil {
+				t.Fatal(err)
+			}
+			save(palette.id + "-conversation")
+		} else if err := tt.Click("完成"); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
