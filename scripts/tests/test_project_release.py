@@ -222,6 +222,29 @@ class ProjectReleaseTests(unittest.TestCase):
         record['assets'] = {P.assets('0.3.0')['relay-windows']: {}}
         self.assertIn(P.assets('0.3.0')['relay-windows'], D.download_blocks(record)['native-downloads'])
 
+    def test_windows_checkout_keeps_go_formatting_and_web_bytes_clean(self):
+        source = self.root / 'checkout-source'; source.mkdir()
+        (source / '.gitattributes').write_bytes((ROOT / '.gitattributes').read_bytes())
+        files = {'sample.go': b'package fixture\n', 'desktop/sample.go': b'package fixture\n',
+                 'web/fixture.js': b'const fixture = "exact bytes";\n'}
+        for name, data in files.items():
+            path = source / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
+        def git(cwd, *args):
+            return subprocess.check_output(['git', *args], cwd=cwd, stderr=subprocess.STDOUT)
+        git(source, 'init')
+        git(source, 'config', 'core.autocrlf', 'false')
+        git(source, 'add', '--', '.gitattributes', *files)
+        git(source, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture')
+        checkout = self.root / 'windows-checkout'
+        git(self.root, '-c', 'core.autocrlf=true', 'clone', '--no-hardlinks', str(source), str(checkout))
+        git(checkout, 'config', 'core.autocrlf', 'true')
+        for name, data in files.items():
+            path = checkout / name
+            self.assertEqual(path.read_bytes(), data, f'checkout changed {name} bytes')
+            # gofmt writes LF. Formatting valid Go must not dirty the checkout.
+            if name.endswith('.go'): path.write_bytes(data)
+        self.assertEqual(git(checkout, 'status', '--porcelain'), b'')
+
     @unittest.skipUnless(os.name == 'nt' and shutil.which('pwsh'), 'Windows PowerShell package test')
     def test_windows_packager_produces_valid_bundle_from_clean_source(self):
         source = self.root / 'package-source'; source.mkdir()

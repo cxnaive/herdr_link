@@ -2,3 +2,6 @@
 
 # Release descriptors hash these exact committed bytes, including line endings.
 web/** -text
+
+# gofmt always writes LF; keep Windows release checkouts clean after validation.
+*.go text eol=lf
