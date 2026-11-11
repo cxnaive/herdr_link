@@ -70,19 +70,8 @@ jobs:
           key: mygo-linux-${{ matrix.arch }}-${{ hashFiles('desktop/go.sum', 'desktop/third_party/mygo-terminal/mygo-plugin.json') }}
       - name: Install Linux runtime and isolated GUI test dependencies
         run: |
-          # Match check.yml: the runner's Azure HTTP mirror can stall DNS.
-          if [ -f /etc/apt/apt-mirrors.txt ]; then
-            sudo sed -i '\|^http://azure[.]archive[.]ubuntu[.]com/ubuntu/|d' /etc/apt/apt-mirrors.txt
-          fi
-          # ARM runners use ports directly rather than the mirror list.
-          for source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
-            if [ -f "$source" ]; then
-              sudo sed -i 's|http://ports[.]ubuntu[.]com/ubuntu-ports|https://ports.ubuntu.com/ubuntu-ports|g' "$source"
-            fi
-          done
-          sudo timeout --kill-after=5s 180s apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 -o APT::Update::Error-Mode=any update
-          sudo timeout --kill-after=5s 360s apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y --no-install-recommends libgtk-3-0t64 libwebkit2gtk-4.1-0 libsecret-1-0 \
-            gnome-keyring dbus-x11 xvfb xauth xdotool imagemagick fonts-noto-cjk
+          python3 scripts/test_ci_deps.py
+          ./scripts/install-ci-deps.sh
       - name: Format, vet and packaging tests
         run: |
           mapfile -t files < <(git ls-files -- '*.go')
