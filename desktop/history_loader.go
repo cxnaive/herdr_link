@@ -383,7 +383,7 @@ func (a *application) readHistoryPage(ctx context.Context, m *machine, c *conver
 				a.readHistoryPage(ctx, m, c, r, requestEpoch, epoch, agent)
 				return
 			}
-			c.entries = r.entries()
+			c.applyHistoryEntries(r.entries(), r.older)
 			c.revision = r.head.Revision
 			if !r.fast || r.cursor == "" {
 				c.next = r.cursor
@@ -405,7 +405,6 @@ func (a *application) readHistoryPage(ctx context.Context, m *machine, c *conver
 				c.subscription = r.head.Subscription
 				c.sequence = r.head.Sequence
 			}
-			c.list.HoldPlace()
 			c.lastCached = time.Time{}
 			a.cacheHistory(m, c)
 			if c.historyCancel != nil {
@@ -447,4 +446,13 @@ func (c *conversation) historyLabel() string {
 		return "正在加载更早消息…"
 	}
 	return "正在同步…"
+}
+
+func (c *conversation) applyHistoryEntries(entries []entry, older bool) {
+	c.entries = entries
+	// Only explicit backward paging suppresses FollowEnd. A recent refresh
+	// follows the tail unless the reader already scrolled away from it.
+	if older {
+		c.list.HoldPlace()
+	}
 }

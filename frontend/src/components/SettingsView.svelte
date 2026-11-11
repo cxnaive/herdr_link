@@ -22,6 +22,7 @@
     TERMINAL_REFRESH_LABELS,
     TERMINAL_REFRESH_OPTIONS,
     THEMES,
+    THEME_LABELS,
     type AgentView,
     type HomeLayout,
     type InterfaceSize,
@@ -811,7 +812,7 @@
     <fieldset class="choice-grid">
       <legend>Theme</legend>
       {#each THEMES as item (item)}
-        <button class:active={$theme === item} type="button" aria-pressed={$theme === item} onclick={() => setTheme(item as Theme)}>{item}</button>
+        <button class:active={$theme === item} type="button" aria-pressed={$theme === item} onclick={() => setTheme(item as Theme)}>{THEME_LABELS[item]}</button>
       {/each}
     </fieldset>
     <fieldset class="choice-grid compact-grid">

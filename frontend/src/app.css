@@ -139,6 +139,117 @@
   --terminal-link-visited: #8839ef;
 }
 
+/* Shared client palettes change only local UI colors, not remote ANSI output. */
+:root[data-theme='mint'] {
+  color-scheme: dark;
+  --background: #111417;
+  --foreground: #edf0f3;
+  --card: #1b2025;
+  --card-hover: #252c32;
+  --muted: #a5afb9;
+  --border: #354049;
+  --input: #1b2025;
+  --primary: #a6dbc9;
+  --primary-foreground: #112b23;
+  --secondary: #263b34;
+  --danger: #ffb0ac;
+  --success: #a6dbc9;
+  --warning: #ebc18c;
+  --trust: #a6dbc9;
+  --terminal: #111417;
+  --terminal-text: #edf0f3;
+  --terminal-link: #80bfff;
+  --terminal-link-visited: #c8a2ff;
+}
+
+:root[data-theme='midnight'] {
+  color-scheme: dark;
+  --background: #101826;
+  --foreground: #e7eef9;
+  --card: #172235;
+  --card-hover: #21304a;
+  --muted: #acbdd5;
+  --border: #405674;
+  --input: #172235;
+  --primary: #9cc7ff;
+  --primary-foreground: #102542;
+  --secondary: #243b58;
+  --danger: #ffb4ab;
+  --success: #9cc7ff;
+  --warning: #f1c68e;
+  --trust: #9cc7ff;
+  --terminal: #111417;
+  --terminal-text: #edf0f3;
+  --terminal-link: #80bfff;
+  --terminal-link-visited: #c8a2ff;
+}
+
+:root[data-theme='plum'] {
+  color-scheme: dark;
+  --background: #191620;
+  --foreground: #f1eaf7;
+  --card: #231f2d;
+  --card-hover: #302938;
+  --muted: #bcb0c9;
+  --border: #50445c;
+  --input: #231f2d;
+  --primary: #d4b7f5;
+  --primary-foreground: #2f194a;
+  --secondary: #3b2e49;
+  --danger: #ffb2bb;
+  --success: #d4b7f5;
+  --warning: #efc58e;
+  --trust: #d4b7f5;
+  --terminal: #111417;
+  --terminal-text: #edf0f3;
+  --terminal-link: #80bfff;
+  --terminal-link-visited: #c8a2ff;
+}
+
+:root[data-theme='cloud'] {
+  color-scheme: light;
+  --background: #f4f7fb;
+  --foreground: #1c293a;
+  --card: #ffffff;
+  --card-hover: #e9eef5;
+  --muted: #4d6075;
+  --border: #a4b3c5;
+  --input: #ffffff;
+  --primary: #19569f;
+  --primary-foreground: #ffffff;
+  --secondary: #dbe9fa;
+  --danger: #ae3038;
+  --success: #19569f;
+  --warning: #80520d;
+  --trust: #19569f;
+  --terminal: #111417;
+  --terminal-text: #edf0f3;
+  --terminal-link: #80bfff;
+  --terminal-link-visited: #c8a2ff;
+}
+
+:root[data-theme='paper'] {
+  color-scheme: light;
+  --background: #f8f4ed;
+  --foreground: #30291f;
+  --card: #fffdf7;
+  --card-hover: #eee7dc;
+  --muted: #655848;
+  --border: #b9a891;
+  --input: #fffdf7;
+  --primary: #775026;
+  --primary-foreground: #ffffff;
+  --secondary: #e8ddcc;
+  --danger: #a83432;
+  --success: #775026;
+  --warning: #78500b;
+  --trust: #775026;
+  --terminal: #111417;
+  --terminal-text: #edf0f3;
+  --terminal-link: #80bfff;
+  --terminal-link-visited: #c8a2ff;
+}
+
 * { box-sizing: border-box; }
 html, body, #app { max-width: 100%; min-height: 100%; margin: 0; }
 html { background: var(--background); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }

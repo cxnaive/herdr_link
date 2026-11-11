@@ -9,7 +9,6 @@
   import GlobalJump from '$components/GlobalJump.svelte';
   import LockScreen from '$components/LockScreen.svelte';
   import ManageDialog from '$components/ManageDialog.svelte';
-  import SettingsView from '$components/SettingsView.svelte';
   import TerminalView from '$components/TerminalView.svelte';
   import UpdateProgressDialog from '$components/UpdateProgressDialog.svelte';
   import WorkspaceInspector from '$components/WorkspaceInspector.svelte';
@@ -711,7 +710,13 @@
   </header>
 
   {#if $currentView.view === 'settings'}
-    <SettingsView {readOnlyRelayIds} />
+    {#await importOrReload(() => import('$components/SettingsView.svelte'), () => get(currentView).view === 'settings')}
+      <main class="page" aria-label="Opening settings"><p role="status">Loading settings…</p></main>
+    {:then { default: SettingsView }}
+      <SettingsView {readOnlyRelayIds} />
+    {:catch error}
+      <main class="page"><p role="alert">{error instanceof AppReloadHeld ? error.message : 'Settings could not be loaded. Reload the app to try again.'}</p></main>
+    {/await}
   {:else if $currentView.view === 'workspaces'}
     <WorkspaceManager {readOnlyRelayIds} />
   {:else if $currentView.view === 'launch'}

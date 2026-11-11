@@ -32,11 +32,11 @@ import java.io.File
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
-    private val background = AgentStyle.background
-    private val surface = AgentStyle.panel
-    private val accent = AgentStyle.accent
-    private val ink = AgentStyle.ink
-    private val muted = AgentStyle.muted
+    private val background get() = AgentStyle.background
+    private val surface get() = AgentStyle.panel
+    private val accent get() = AgentStyle.accent
+    private val ink get() = AgentStyle.ink
+    private val muted get() = AgentStyle.muted
     private lateinit var vault: Vault
     private lateinit var engine: RelayEngine
     private lateinit var sharedRelay: SharedRelay
@@ -147,8 +147,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(state: Bundle?) {
+        setTheme(PocketAppearance.load(this).style)
         super.onCreate(state)
-        window.statusBarColor = background; window.navigationBarColor = background
+        PocketAppearance.applyWindow(this)
         sharedRelay = SharedRelay.get(this)
         vault = sharedRelay.vault
         readRelays()
@@ -286,7 +287,7 @@ class MainActivity : ComponentActivity() {
         if (tab == "files" && file != null && next != tab) { leaveFile { tab = next; render() }; return }
         tab = next; render()
     }
-    private fun render() {
+    private fun renderNavigation() {
         updateHeader(); nav.removeAllViews()
         val expanded = resources.configuration.screenWidthDp >= 600
         listOf(Triple("agents", "Agents", "agents"), Triple("files", "工作区", "folder"), Triple("devices", "设备", "computer")).forEach { (id, title, icon) ->
@@ -299,12 +300,30 @@ class MainActivity : ComponentActivity() {
             }
             nav.addView(item, if (expanded) LinearLayout.LayoutParams(-1, dp(76)) else LinearLayout.LayoutParams(0, dp(64), 1f))
         }
+    }
+    private fun render() {
+        renderNavigation()
         if (tab != "agents") nativeAgents.pause()
         content.removeAllViews()
         when (tab) { "devices" -> renderDevices(); "agents" -> renderAgents(); else -> if (file == null) renderFiles() else renderFile() }
     }
+    private fun applyAppearance(choice: PocketTheme) {
+        // The picker belongs to Devices. Repaint only this page; do not pause
+        // Agents, recreate the Activity, or cancel in-flight transfers/requests.
+        if (tab != "devices" || isFinishing || isDestroyed) return
+        if (!PocketAppearance.save(this, choice)) { toast("主题保存失败，请重试"); return }
+        PocketAppearance.applyWindow(this)
+        root.setBackgroundColor(background)
+        nav.setBackgroundColor(surface)
+        heading.setTextColor(ink); subtitle.setTextColor(muted); stateDot.setTextColor(muted)
+        renderNavigation()
+        content.removeAllViews(); renderDevices()
+    }
     private fun renderDevices() {
         val body = scrollColumn()
+        body.addView(AgentStyle.button(this, "主题配色 · ${PocketAppearance.current.title}") {
+            AppearanceDialog.show(this, ::applyAppearance)
+        }.apply { contentDescription = "主题配色" }.space(0, 0, 0, 12))
         body.addView(label("扫描电脑端的设备邀请，或粘贴完整配对链接。每台手机有独立凭据。", 14, muted).space(0, 8, 0, 20))
         val actions = LinearLayout(this)
         actions.addView(button("扫描二维码", true) {

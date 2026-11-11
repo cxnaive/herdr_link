@@ -33,8 +33,12 @@ export const APP_ASSET_VERSION = __APP_ASSET_VERSION__;
 // merely a version.json response.
 export const APP_BUILD_ID = __APP_BUILD_ID__;
 export const SERVICE_WORKER_URL = __SERVICE_WORKER_URL__;
-export const THEMES = ['dark', 'light', 'nord', 'solarized', 'rose', 'latte'] as const;
+export const THEMES = ['dark', 'light', 'nord', 'solarized', 'rose', 'latte', 'mint', 'midnight', 'plum', 'cloud', 'paper'] as const;
 export type Theme = (typeof THEMES)[number];
+export const THEME_LABELS: Record<Theme, string> = {
+  dark: 'dark', light: 'light', nord: 'nord', solarized: 'solarized', rose: 'rose', latte: 'latte',
+  mint: '薄荷深色', midnight: '午夜蓝', plum: '石墨紫', cloud: '云白蓝', paper: '暖纸棕',
+};
 // Terminal color scheme per theme. Every theme keeps a dark terminal pane by
 // default; a light-terminal theme renders the pane on a light background and
 // swaps the ANSI palette so the desktop's light-scheme output stays legible.
@@ -46,6 +50,7 @@ export const THEME_TERMINAL_SCHEMES: Record<Theme, TerminalScheme> = {
   solarized: 'dark',
   rose: 'dark',
   latte: 'light',
+  mint: 'dark', midnight: 'dark', plum: 'dark', cloud: 'dark', paper: 'dark',
 };
 export const INTERFACE_SIZES = ['compact', 'regular', 'large'] as const;
 export type InterfaceSize = (typeof INTERFACE_SIZES)[number];
@@ -97,6 +102,7 @@ export const THEME_COLORS: Record<Theme, string> = {
   solarized: '#002b36',
   rose: '#191724',
   latte: '#eff1f5',
+  mint: '#111417', midnight: '#101826', plum: '#191620', cloud: '#f4f7fb', paper: '#f8f4ed',
 };
 
 /**

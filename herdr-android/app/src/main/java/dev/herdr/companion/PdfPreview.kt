@@ -21,12 +21,12 @@ class PdfPreview(context: Context, bytes: ByteArray, initialPage: Int = 1, priva
     private var renderedWidth = 0
     @Volatile private var closed = false
     val picture = ZoomImageView(context)
-    private val status = TextView(context).apply { text = "正在打开 PDF…"; setTextColor(Color.WHITE); textSize = 13f; gravity = Gravity.CENTER }
+    private val status = TextView(context).apply { text = "正在打开 PDF…"; setTextColor(AgentStyle.ink); textSize = 13f; gravity = Gravity.CENTER }
     private val previous = action("‹", "上一页") { render(pageIndex - 1, true) }
     private val next = action("›", "下一页") { render(pageIndex + 1, true) }
     private val zoom = action("适合", "还原 PDF 缩放") { picture.fitScreen() }
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
-    private fun action(label: String, description: String, click: () -> Unit) = Button(context).apply { text = label; textSize = 12f; isAllCaps = false; setTextColor(0xffe8f0f2.toInt()); background = android.graphics.drawable.InsetDrawable(AgentStyle.shape(context, 0xff1d323c.toInt(), 12), dp(3), dp(4), dp(3), dp(4)); minWidth = 0; minimumWidth = 0; setPadding(0, 0, 0, 0); contentDescription = description; setOnClickListener { click() } }
+    private fun action(label: String, description: String, click: () -> Unit) = Button(context).apply { text = label; textSize = 12f; isAllCaps = false; setTextColor(AgentStyle.ink); background = android.graphics.drawable.InsetDrawable(AgentStyle.shape(context, AgentStyle.raised, 12), dp(3), dp(4), dp(3), dp(4)); minWidth = 0; minimumWidth = 0; setPadding(0, 0, 0, 0); contentDescription = description; setOnClickListener { click() } }
     init {
         orientation = VERTICAL
         addView(LinearLayout(context).apply {

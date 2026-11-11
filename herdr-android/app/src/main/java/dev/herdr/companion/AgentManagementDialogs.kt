@@ -2,7 +2,6 @@ package dev.herdr.companion
 
 import android.app.AlertDialog
 import android.content.Context
-import android.graphics.Color
 import android.view.View
 import android.widget.*
 import org.json.JSONArray
@@ -12,7 +11,7 @@ typealias ManagementReply = (JSONObject?, String?) -> Unit
 
 /** Management never types slash commands into a busy terminal. */
 object AgentManagementDialogs {
-    private val ink = Color.rgb(232, 240, 242)
+    private val ink get() = AgentStyle.ink
     private fun body(context: Context) = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; val p = (20 * resources.displayMetrics.density).toInt(); setPadding(p, p / 2, p, p / 2) }
     private fun text(context: Context, value: String) = TextView(context).apply { text = value; textSize = 14f; setTextColor(ink); setPadding(0, 10, 0, 10) }
     private fun input(context: Context, hint: String, value: String = "") = EditText(context).apply { this.hint = hint; setText(value); setTextColor(ink); setSingleLine() }

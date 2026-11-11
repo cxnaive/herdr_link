@@ -10,19 +10,21 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 
-/** Shared, deliberately quiet dark palette. Color signals actions and state, not every surface. */
+/** Shared palette tokens. Only explicit local appearance settings change these colors. */
 internal object AgentStyle {
-    val background = 0xff111417.toInt()
-    val panel = 0xff1b2025.toInt()
-    val raised = 0xff252c32.toInt()
-    val ink = 0xffedf0f3.toInt()
-    val muted = 0xffa5afb9.toInt()
-    val accent = 0xffa6dbc9.toInt()
-    val onAccent = 0xff112b23.toInt()
-    val border = 0xff354049.toInt()
-    val selected = 0xff263b34.toInt()
-    val warning = 0xffebc18c.toInt()
-    val error = 0xffffb0ac.toInt()
+    val background get() = PocketAppearance.current.colors.background
+    val panel get() = PocketAppearance.current.colors.panel
+    val raised get() = PocketAppearance.current.colors.raised
+    val ink get() = PocketAppearance.current.colors.ink
+    val muted get() = PocketAppearance.current.colors.muted
+    val accent get() = PocketAppearance.current.colors.accent
+    val onAccent get() = PocketAppearance.current.colors.onAccent
+    val border get() = PocketAppearance.current.colors.border
+    val selected get() = PocketAppearance.current.colors.selected
+    val warning get() = PocketAppearance.current.colors.warning
+    val error get() = PocketAppearance.current.colors.error
+    // Remote ANSI output is not recolored when changing the app's palette.
+    val terminalBackground = 0xff111417.toInt()
     val medium = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     fun dp(context: Context, value: Int) = (value * context.resources.displayMetrics.density).toInt()
     fun contentWidth(context: Context, maximum: Int = 760): Int {
@@ -42,7 +44,7 @@ internal object AgentStyle {
         if (stroke != Color.TRANSPARENT) setStroke(dp(context, 1).coerceAtLeast(1), stroke)
     }
     fun ripple(context: Context, color: Int = Color.TRANSPARENT, radius: Int = 10) = RippleDrawable(
-        ColorStateList.valueOf(0x24a6dbc9), shape(context, color, radius), shape(context, Color.WHITE, radius))
+        ColorStateList.valueOf((accent and 0x00ffffff) or 0x24000000), shape(context, color, radius), shape(context, Color.WHITE, radius))
     fun button(context: Context, text: String, primary: Boolean = false, subtle: Boolean = false, action: () -> Unit) = Button(context).apply {
         this.text = text; isAllCaps = false; textSize = 13f; typeface = medium; letterSpacing = 0f
         val foreground = if (primary) onAccent else if (subtle) accent else ink

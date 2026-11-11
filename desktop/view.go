@@ -181,6 +181,10 @@ func (a *application) chatView(c *ui.Context, m *machine, chat *conversation) {
 		if ui.Button(c, "刷新").Disabled(chat.loading || m.session == nil).Clicked() {
 			a.loadHistory(false)
 		}
+		if len(chat.entries) > 0 && (chat.search != "" || !chat.list.AtEnd()) && ui.Button(c, "回到最新").Clicked() {
+			chat.search = ""
+			chat.list.ScrollToEnd()
+		}
 	})
 	if chat.loading || chat.preparing {
 		ui.Row(c).FillWidth().MaxWidth(chatContentWidth+2*chatGutter).AlignSelf(ui.Center).Padding(4, chatGutter).Gap(8).Wrap().AlignItems(ui.Center).Children(func() {

@@ -294,6 +294,16 @@ DMG 内应用只有 ad-hoc 签名，**没有 Developer ID 签名或 Apple 公证
 
 Windows / Linux / macOS 桌面客户端当前均为 **0.3.2 开发预览**；macOS CI 使用 macOS 15 原生 Apple Silicon / Intel runner，不表示所有旧版系统和交互场景已完成验证。
 
+### 界面配色（开发分支，未发布）
+
+各端提供同款 **薄荷深色、午夜蓝、石墨紫、云白蓝、暖纸棕**，前三套深色、后两套浅色；原有主题和默认选择不变。
+
+- Android：**设备 → 主题配色**，预览后应用。
+- Windows / Linux / macOS：侧栏 **外观 → 应用主题**；终端深浅色可独立设置。
+- Web 界面：**Settings → Appearance → Theme**；新增配色的终端仍保持深色，原有 Latte 浅色终端保留。
+
+选择只保存在当前客户端，不同步到其他设备，不修改远端配置；切换不重连，也不清除草稿或待确认发送状态。
+
 ## 安全与运维
 
 - **保留身份升级**：保留 Relay 主密钥、配置和设备库，只重启需要更新的 Relay / Gateway，不必重启 Herdr 或 Agent。
