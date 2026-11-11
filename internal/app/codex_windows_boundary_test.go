@@ -203,6 +203,13 @@ func TestWindowsCodexWriterRequiresExclusiveLiveOwner(t *testing.T) {
 			writers, err := codexProcessWriters(cmd.Process.Pid, filepath.Join(dir, "sessions"))
 			if mode == "exclusive" {
 				if err != nil || writers[reportID] == "" {
+					// Only synthetic fixture data: identify which fail-closed boundary
+					// rejected the owner without weakening the ownership assertion.
+					birth, birthErr := codexProcessStart(cmd.Process.Pid)
+					canonical, canonicalErr := filepath.EvalSymlinks(locks)
+					identity, owned, ownerErr := codexWindowsWriter(path, cmd.Process.Pid)
+					t.Logf("fixture pid=%d birth=%q birthErr=%v dir=%q canonical=%q canonicalErr=%v identity=%q owned=%v ownerErr=%v",
+						cmd.Process.Pid, birth, birthErr, locks, canonical, canonicalErr, identity, owned, ownerErr)
 					t.Fatal(writers, err)
 				}
 				var wg sync.WaitGroup
