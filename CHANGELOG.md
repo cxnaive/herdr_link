@@ -15,6 +15,7 @@ project follows [Semantic Versioning](https://semver.org/).
 - Bind native Windows x64 Codex terminals to their verified sessions, enabling structured history, prompts, approvals and run state. Shared runtimes also support model/reasoning settings; embedded runtimes retain their terminal-only settings interface.
 
 ### Fixed
+- Recognize Windows short-name and case aliases for Codex lock directories without treating them as a different session; continue rejecting reparse paths, ambiguous owners and nonexclusive locks.
 - Open desktop conversations at the latest loaded message and keep following new messages after history refreshes. Preserve deliberate backward reading and older-page positions, with a “Back to latest” control that clears search without reloading history.
 - Use Space for current OMP multi-select answers, distinguish remembering an approval scope from granting it, and prevent an Android question dialog from submitting to another Agent after navigation.
 - Send ordinary Pi and Oh My Pi conversation messages through the normal prompt route on Android instead of requiring the blocked-Pi bridge. Preserve drafts and delivery uncertainty; approvals still require their own controls or explicit terminal input.

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -239,5 +240,57 @@ func TestWindowsCodexWriterRequiresExclusiveLiveOwner(t *testing.T) {
 				t.Fatal("orphan lock file treated as live writer", e)
 			}
 		})
+	}
+}
+
+func TestWindowsCodexLockDirectoryAcceptsAliasesButRejectsReparsePoints(t *testing.T) {
+	root := t.TempDir()
+	locks := filepath.Join(root, "thread-writer-locks")
+	if err := os.Mkdir(locks, 0700); err != nil {
+		t.Fatal(err)
+	}
+	long, err := filepath.EvalSymlinks(locks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, err := windows.UTF16PtrFromString(locks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]uint16, 32768)
+	n, err := windows.GetShortPathName(name, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || n >= uint32(len(buffer)) {
+		t.Fatal("short path lookup", n, err)
+	}
+	for _, alias := range []string{locks, long, strings.ToUpper(locks), windows.UTF16ToString(buffer[:n])} {
+		got, err := codexWindowsLockDirectory(alias)
+		if err != nil || got != long {
+			t.Fatalf("same directory alias %q: got %q, %v", alias, got, err)
+		}
+	}
+	file := filepath.Join(root, "regular-file")
+	if err := os.WriteFile(file, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{"relative", file, filepath.Join(root, "missing")} {
+		if _, err := codexWindowsLockDirectory(invalid); err == nil {
+			t.Fatalf("accepted invalid directory %q", invalid)
+		}
+	}
+	// Directory junction creation does not require symlink privileges.
+	junction := filepath.Join(root, "junction")
+	output, err := exec.Command("cmd.exe", "/c", "mklink", "/J", junction, locks).CombinedOutput()
+	if err != nil {
+		t.Fatalf("create fixture junction: %v: %s", err, output)
+	}
+	t.Cleanup(func() { os.Remove(junction) })
+	child := filepath.Join(locks, "child")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{junction, filepath.Join(junction, "child")} {
+		if _, err := codexWindowsLockDirectory(invalid); err == nil {
+			t.Fatalf("accepted reparse directory %q", invalid)
+		}
 	}
 }

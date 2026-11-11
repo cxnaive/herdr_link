@@ -23,9 +23,9 @@ func codexProcessWriters(pid int, root string) (map[string]string, error) {
 		return nil, err
 	}
 	dir := filepath.Join(filepath.Dir(root), "thread-writer-locks")
-	canonical, err := filepath.EvalSymlinks(dir)
-	if err != nil || canonical != dir {
-		return nil, errCodexProcessStart
+	dir, err = codexWindowsLockDirectory(dir)
+	if err != nil {
+		return nil, err
 	}
 	f, err := os.Open(dir)
 	if err != nil {
@@ -58,6 +58,40 @@ func codexProcessWriters(pid int, root string) (map[string]string, error) {
 		return nil, errCodexProcessStart
 	}
 	return result, nil
+}
+
+// EvalSymlinks also expands 8.3 names and normalizes case on Windows.
+// Check reparse points explicitly instead of treating spelling as identity.
+func codexWindowsLockDirectory(dir string) (string, error) {
+	if !filepath.IsAbs(dir) {
+		return "", errCodexProcessStart
+	}
+	canonical, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", err
+	}
+	for path := filepath.Clean(dir); ; path = filepath.Dir(path) {
+		name, err := windows.UTF16PtrFromString(path)
+		if err != nil {
+			return "", err
+		}
+		attrs, err := windows.GetFileAttributes(name)
+		if err != nil || attrs&windows.FILE_ATTRIBUTE_DIRECTORY == 0 || attrs&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+			return "", errCodexProcessStart
+		}
+		if filepath.Dir(path) == path {
+			break
+		}
+	}
+	original, err := os.Stat(dir)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := os.Stat(canonical)
+	if err != nil || !os.SameFile(original, resolved) {
+		return "", errCodexProcessStart
+	}
+	return canonical, nil
 }
 
 func codexFileUsers(h windows.Handle) ([]uint64, error) {
