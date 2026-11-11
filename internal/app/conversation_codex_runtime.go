@@ -15,6 +15,7 @@ import (
 	"github.com/0cv/herdr-mobile-relay/internal/codexruntime"
 	"github.com/0cv/herdr-mobile-relay/internal/coordinator"
 	"github.com/0cv/herdr-mobile-relay/internal/herdr"
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 )
 
 const codexRuntimeSource = "codex-tui-runtime:"
@@ -73,7 +74,7 @@ func (s *Server) inspectCodexProcess(ctx context.Context, a *coordinator.AgentSt
 	if err != nil {
 		return bad("process_unavailable")
 	}
-	if process.Cwd != a.Cwd {
+	if !pathidentity.SameDirectory(process.Cwd, a.Cwd) {
 		return bad("process_project_conflict")
 	}
 	birth, err := codexProcessStart(process.PID)
@@ -244,7 +245,7 @@ func (s *Server) observeCodexRuntime(ctx context.Context, agents []*coordinator.
 		}
 		var origin string
 		obs.thread, origin, obs.reason = selectCodexPrimary(obs.probe, store.threads, obs.report, obs.title)
-		if obs.reason == "" && obs.thread.CWD != a.Cwd {
+		if obs.reason == "" && !pathidentity.SameDirectory(obs.thread.CWD, a.Cwd) {
 			obs.reason = "runtime_metadata_conflict"
 		}
 		if obs.reason != "" {

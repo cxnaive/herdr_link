@@ -14,6 +14,10 @@ on:
       - 'desktop/go.*'
       - 'deploy/windows-relay/**'
       - 'scripts/package-windows-relay.ps1'
+      - 'scripts/project_release.py'
+      - 'scripts/tests/test_project_release.py'
+      - 'VERSION.json'
+      - 'web/**'
       - '.github/workflows/relay-windows.yml'
   pull_request:
     branches: [feat/android-file-companion, main, dev]
@@ -28,14 +32,19 @@ on:
       - 'desktop/go.*'
       - 'deploy/windows-relay/**'
       - 'scripts/package-windows-relay.ps1'
+      - 'scripts/project_release.py'
+      - 'scripts/tests/test_project_release.py'
+      - 'VERSION.json'
+      - 'web/**'
       - '.github/workflows/relay-windows.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: relay-windows-${{ github.event.pull_request.number || github.ref }}
+  group: relay-windows-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -87,6 +96,10 @@ jobs:
         run: |
           go test -count=1 -timeout=90s ./internal/localipc ./internal/privatepath ./internal/processjob
           if ($LASTEXITCODE -ne 0) { throw 'Windows platform boundary tests failed.' }
+          go test -count=1 -timeout=90s -run '^TestWindowsCodex' ./internal/app
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Codex ownership tests failed.' }
+          go test -count=1 ./internal/pathidentity
+          if ($LASTEXITCODE -ne 0) { throw 'Windows path identity tests failed.' }
       - name: Install pinned real Herdr (entire ConPTY package)
         run: |
           $zip = Join-Path $env:RUNNER_TEMP 'herdr-0.9.5-windows.zip'
@@ -105,8 +118,14 @@ jobs:
         run: |
           go test -v -count=1 -timeout=6m ./tests/windows
           if ($LASTEXITCODE -ne 0) { throw 'Real Windows Relay integration failed; do not distribute the package.' }
-      - name: Package tested Windows Relay preview
+      - name: Package tested Windows Relay
         run: ./scripts/package-windows-relay.ps1
+      - name: Verify Windows package and release guards
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python -m unittest discover -s scripts/tests -p test_project_release.py
+          if ($LASTEXITCODE -ne 0) { throw 'Windows package validation failed.' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: herdr-relay-windows-amd64-${{ github.run_number }}

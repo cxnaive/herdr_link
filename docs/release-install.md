@@ -35,7 +35,23 @@ Gateway 只需开放业务端口 TCP 8377，管理页通过 SSH 转发。Relay �
 
 普通手机安装 `herdr-link-android-@VERSION@-arm64-v8a.apk`；其他架构按附件名选择。Android 9 及以上。直接覆盖原 Pocket，保留包名、签名与数据；无需卸载。
 
-## Windows
+## Windows Relay
+
+在运行 Agent 的 Windows 10/11 x86_64 电脑上安装原生 Herdr（已验证 0.9.5）与 PowerShell 7。保留 Herdr 完整安装包中的 ConPTY 文件，并让 `herdr.exe` 可通过 PATH 找到。Relay 与 Herdr 使用同一普通用户。
+
+解压 `herdr-link-relay-@VERSION@-windows-amd64.zip`，在包内目录打开 PowerShell 7：
+
+```powershell
+./install.ps1
+./run.ps1 gateway-join
+./run.ps1 serve
+```
+
+接入时按提示粘贴 Gateway 管理页生成的 `herdr-gateway://` 接入码。保持 Relay 运行，在另一个 PowerShell 中执行 `./run.ps1 tcp-pair '我的客户端'`，将生成的邀请填入客户端。
+
+这是未签名的前台运行包，不安装 Windows Service。升级时停止旧 Relay，将完整包解压到新目录，保留 `%LOCALAPPDATA%\HerdrLink\relay` 中的配置与配对数据，然后运行新目录中的 `run.ps1 serve`。更详细的配置和端口排障见包内 `README.md`。
+
+## Windows 桌面
 
 解压 `herdr-link-desktop-@VERSION@-windows-amd64.zip`，运行 `Herdr Desktop.exe`，保持 `ghostty-vt.dll` 在同一目录。程序未签名，PDF 预览需要系统 WebView2。
 

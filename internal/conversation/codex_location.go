@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 	"github.com/0cv/herdr-mobile-relay/internal/sqliteexec"
 )
 
@@ -138,7 +139,7 @@ func (r *Reader) CodexSessionProjectMatches(cwd, sessionID string) bool {
 			CWD string `json:"cwd"`
 		} `json:"payload"`
 	}
-	return json.Unmarshal(scanner.Bytes(), &row) == nil && row.Type == "session_meta" && row.Payload.ID == sessionID && filepath.IsAbs(row.Payload.CWD) && filepath.Clean(row.Payload.CWD) == filepath.Clean(cwd)
+	return json.Unmarshal(scanner.Bytes(), &row) == nil && row.Type == "session_meta" && row.Payload.ID == sessionID && pathidentity.SameDirectory(row.Payload.CWD, cwd)
 }
 
 // A local pin is refused if a title is subsequently reused for another logical
@@ -250,7 +251,7 @@ func (r *Reader) CodexBindingMetadata(cwd, id string) (CodexThreadMetadata, Loca
 // session. Missing history is distinct from conflicting ID/project metadata.
 func (r *Reader) ValidateCodexReport(cwd, id string) (Location, string) {
 	meta, loc, reason := r.CodexBindingMetadata(cwd, id)
-	if reason == "" && filepath.Clean(meta.CWD) != filepath.Clean(cwd) {
+	if reason == "" && !pathidentity.SameDirectory(meta.CWD, cwd) {
 		reason = "herdr_project_mismatch"
 	}
 	return loc, reason

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -94,7 +95,7 @@ func (r *rpc) settingsThread(ctx context.Context, id, cwd string) (settingsThrea
 	}
 	// Originator is the creation client; resumed Desktop threads can run in a TUI.
 	t := result.Thread
-	if t.ID != id || t.CWD != cwd || !settingValue(t.Model) || (t.Status.Type != "active" && t.Status.Type != "idle") {
+	if t.ID != id || !pathidentity.SameDirectory(t.CWD, cwd) || !settingValue(t.Model) || (t.Status.Type != "active" && t.Status.Type != "idle") {
 		return settingsThread{}, ErrSettingsUnavailable
 	}
 	return t, nil

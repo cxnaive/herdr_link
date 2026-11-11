@@ -29,6 +29,8 @@ def download_blocks(record):
             old = f'| {name} | [下载部署包]({base}/herdr-link-{component}-{version}-linux-amd64.tar.gz) |'
             native = native.replace(old, old + f' [下载部署包]({base}/herdr-link-{component}-{version}-linux-arm64.tar.gz) |')
         native = native.replace('ARM64 / macOS 服务端目前只有 CI 独立二进制，不属于本次完整部署包。', '按系统架构选择 amd64（x86_64）或 arm64（aarch64）。macOS 服务端目前只有 CI 独立二进制。')
+    if f'herdr-link-relay-{version}-windows-amd64.zip' in record.get('assets', {}):
+        native += f'\n\n**Windows x86_64 Relay**：[下载完整 ZIP]({base}/herdr-link-relay-{version}-windows-amd64.zip) · [安装说明]({base}/INSTALL.md)。需原生 Herdr 与 PowerShell 7，使用同一普通用户运行。'
     android = f'''#### 下载 Android APK
 
 **[Herdr Link {tag} · Android]({page})** · Android 9 及以上

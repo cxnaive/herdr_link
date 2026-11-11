@@ -42,7 +42,7 @@ func (s *Server) handleAgentSettings(ctx context.Context, client *transport.Clie
 	if in.Type == "get_agent_settings" && err != nil {
 		reason := "无法确认此 Agent 的运行时设置。当前仅支持会话身份明确、仍在运行的 Codex。"
 		if errors.Is(err, errStandaloneSettings) {
-			reason = "此 Codex 使用 --no-daemon，未提供外部模型设置接口；请在电脑终端修改。会话历史与终端交互仍可使用。"
+			reason = "此 Codex 使用内嵌/独立运行时，未提供外部模型设置接口；请在电脑终端修改。会话历史与终端交互仍可使用。"
 		}
 		s.sendCommandResult(client, in.RequestID, in.Type, true, "completed", "", in.PaneID, map[string]any{"available": false, "reason": reason})
 		return

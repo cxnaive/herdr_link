@@ -6,7 +6,7 @@
 
 - `check.yml` 按变更组件执行 Go、Shell / 打包工具或前端检查。
 - `build-artifacts.yml` 自动构建受影响的 Relay / Gateway 和 Android，不发布或部署。
-- `relay-windows.yml` 构建 Windows Relay 预览，使用真实 Windows Herdr 和隔离 Gateway／客户端进行原生集成测试；成功后上传 7 天有效的 Actions 附件，不加入正式 Release。
+- `relay-windows.yml` 构建 Windows Relay 预览，使用真实 Windows Herdr 和隔离 Gateway／客户端进行原生集成测试；成功后上传 7 天有效的 Actions 附件，也可被统一发布构建复用。
 - `desktop-windows.yml` / `desktop-linux.yml` / `desktop-macos.yml` 在相关变更时验证并生成平台预览包，也可被统一发布构建复用。
 - 完整 race、浏览器和设备资格验证手动运行 `check.yml`，设置 `full=true`，不强制每次 push 都运行。
 
@@ -22,6 +22,7 @@ Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端
 | --- | --- | --- |
 | Relay / Gateway · Linux x86_64 | `build-artifacts` | `native-bundles-linux_amd64` |
 | Relay / Gateway · Linux ARM64 | `build-artifacts` | `native-bundles-linux_arm64` |
+| Relay · Windows x86_64 | `relay-windows` | `herdr-relay-windows-amd64-<运行编号>`，包含完整 ZIP / 校验和 |
 | Android | `build-artifacts` | **`android-apks-signed`**，按手机 ABI 选择 APK |
 | macOS Apple Silicon / Intel | `desktop-macos` | `herdr-desktop-macos-universal-<运行编号>`，包含 DMG / 校验和 / 构建元数据 |
 | Windows x86_64 | `desktop-windows` | `herdr-desktop-windows-amd64-<运行编号>` |
@@ -29,7 +30,7 @@ Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端
 
 Android 必须等签名任务成功，使用 `android-apks-signed`，不要拿中间产物 `android-apks-ci` 覆盖现有安装。包里的 “Release APK” 是 Android 构建类型，不表示创建了 GitHub Release。固定签名、应用 ID 和现有配对保持不变。
 
-日常构建可能沿用当前版本号，区分代码时请核对提交 SHA、运行编号及 `BUILD-INFO.json`，不要只看包名。常规 Relay / Android 附件保留 **1 天**，桌面附件保留 **7 天**；过期后需重新运行构建。它们是用于试用的临时下载，不替代长期保留的正式 Release。多个 workflow 下载时，应选择同一个提交的产物。
+日常构建可能沿用当前版本号，区分代码时请核对提交 SHA、运行编号及 `BUILD-INFO.json`，不要只看包名。Linux Relay / Gateway 和 Android 附件保留 **1 天**，Windows Relay 和桌面附件保留 **7 天**；过期后需重新运行构建。它们是用于试用的临时下载，不替代长期保留的正式 Release。多个 workflow 下载时，应选择同一个提交的产物。
 
 ## 准备版本
 
@@ -48,6 +49,7 @@ gh workflow run build-artifacts.yml --ref feat/android-file-companion -f compone
 等待这次构建全部成功。它在**同一次 run、同一个源码提交**中构建：
 
 - Linux x86_64 / ARM64 Relay / Gateway 完整包并执行隔离启动、注册和配对测试。
+- Windows x86_64 Relay 完整 ZIP，执行真实 Herdr 集成测试，校验提交、构建编号、PE 架构与包内逐文件摘要。
 - Android 三种 ABI，使用现有固定签名。
 - Windows 原生界面 / 终端测试与便携 ZIP。
 - macOS Universal DMG：Apple Silicon runner 构建和 ad-hoc 签名，Intel runner 下载并验证相同 DMG；两端运行原生测试、Keychain、App / PDF 启动检查。缺少任何一端成功结果，整套发布不会汇总。
