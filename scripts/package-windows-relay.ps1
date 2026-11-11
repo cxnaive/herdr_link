@@ -6,7 +6,10 @@ $revision = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Unable to resolve source revision.' }
 $sourceStatus = @(git status --porcelain --untracked-files=normal)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to check source status.' }
-if ($sourceStatus.Count) { throw 'Commit changes before packaging Windows Relay.' }
+if ($sourceStatus.Count) {
+    $sourceStatus | ForEach-Object { Write-Host $_ }
+    throw 'Commit changes before packaging Windows Relay.'
+}
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Refusing to replace an existing output directory.' }
 $package = "herdr-link-relay-$version-windows-amd64"
 $stage = Join-Path $OutputDirectory $package
