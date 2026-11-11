@@ -9,6 +9,7 @@ project follows [Semantic Versioning](https://semver.org/).
 - Operate current Pi selectors and input dialogs, OMP approval/Ask dialogs, and native HTML forms through exact-target controls. HTML fields stay in the upstream form: insert text, move between fields, and explicitly submit only at the final control; hidden/private input and unrecognized layouts remain terminal-only.
 
 ### Fixed
+- Open desktop conversations at the latest loaded message and keep following new messages after history refreshes. Preserve deliberate backward reading and older-page positions, with a “Back to latest” control that clears search without reloading history.
 - Use Space for current OMP multi-select answers, distinguish remembering an approval scope from granting it, and prevent an Android question dialog from submitting to another Agent after navigation.
 - Send ordinary Pi and Oh My Pi conversation messages through the normal prompt route on Android instead of requiring the blocked-Pi bridge. Preserve drafts and delivery uncertainty; approvals still require their own controls or explicit terminal input.
 
