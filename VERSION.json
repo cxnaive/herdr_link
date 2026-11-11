@@ -1,31 +1,31 @@
 {
   "repository": "cxnaive/herdr_link",
-  "snapshot_date": "2026-11-09",
+  "snapshot_date": "2026-11-11",
   "android": {
-    "version": "0.3.2",
-    "version_code": 37,
+    "version": "0.3.3",
+    "version_code": 38,
     "source_path": "herdr-android",
     "reference_upstream_revision": "09b52781399114a7576d40fcdf91ccefd7686be6",
     "signature": "debug",
     "signing_certificate_sha256": "fe1ddf4d04f46d45168d53ca25dd2b379f242b6cd9b23169c9717258cf5232b9"
   },
   "relay": {
-    "version": "0.3.2",
+    "version": "0.3.3",
     "source_path": ".",
     "upstream_version": "0.23.5",
     "upstream_revision": "27054011fd8137d5f9702cc9e718aff1bd73443d"
   },
   "native_gateway": {
-    "version": "0.3.2",
+    "version": "0.3.3",
     "source_path": "cmd/herdr-gateway",
     "public_port_example": "8377/tcp"
   },
   "project": {
     "name": "Herdr Link",
-    "version": "0.3.2"
+    "version": "0.3.3"
   },
   "desktop": {
-    "version": "0.3.2",
+    "version": "0.3.3",
     "source_path": "desktop",
     "signed": false
   },

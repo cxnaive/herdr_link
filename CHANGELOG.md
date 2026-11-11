@@ -5,6 +5,8 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-11
+
 ### Added
 - Connect Windows Desktop directly to the current user's native Relay or a Relay in a running WSL distribution, without a Gateway or copying invitations. Preserve device credentials and drafts across reconnects, and keep WSL distributions separate even when their Relay ports match.
 - Offer the same five local color palettes on Windows/Linux/macOS desktop and Web clients as on Android. Preserve existing themes and defaults; desktop terminal light/dark controls remain independent, and the new Web palettes retain a dark terminal.

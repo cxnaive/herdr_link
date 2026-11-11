@@ -292,9 +292,9 @@ python3 scripts/package-linux.py
 
 DMG 内应用只有 ad-hoc 签名，**没有 Developer ID 签名或 Apple 公证**。首次启动可能需要确认来源后在“系统设置 → 隐私与安全性”中选择“仍要打开”；不建议关闭全局安全检查。完整安装、CI 验证范围及[源码构建说明](desktop/README.md#macos)见桌面文档。
 
-Windows / Linux / macOS 桌面客户端当前均为 **0.3.2 开发预览**；macOS CI 使用 macOS 15 原生 Apple Silicon / Intel runner，不表示所有旧版系统和交互场景已完成验证。
+Windows / Linux / macOS 桌面客户端当前均为 **0.3.3 开发预览**；macOS CI 使用 macOS 15 原生 Apple Silicon / Intel runner，不表示所有旧版系统和交互场景已完成验证。
 
-### 界面配色（开发分支，未发布）
+### 界面配色（0.3.3）
 
 各端提供同款 **薄荷深色、午夜蓝、石墨紫、云白蓝、暖纸棕**，前三套深色、后两套浅色；原有主题和默认选择不变。
 
