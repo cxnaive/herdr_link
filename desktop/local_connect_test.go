@@ -3,7 +3,6 @@ package main
 import (
 	"image/png"
 	"os"
-	"runtime"
 	"testing"
 
 	"github.com/cxnaive/herdr-desktop/internal/relay"
@@ -22,14 +21,14 @@ func TestLocalConnectionReusesIdentityDraftNamespaceAndRole(t *testing.T) {
 		t.Fatal("merged different computers")
 	}
 }
-func TestLinuxPairViewOffersLocalRouteWithoutAutomaticallyPairing(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux entry point")
+func TestLocalPairViewOffersLocalRouteWithoutAutomaticallyPairing(t *testing.T) {
+	if !localRelaySupported() {
+		t.Skip("local connection entry point")
 	}
 	a := newApplication(true)
 	defer a.cancel()
 	a.pairing = true
-	a.local.relays = []relay.LocalRelay{{Socket: "/private/one", Label: "本机 Relay · 127.0.0.1:8375"}, {Socket: "/private/two", Label: "本机 Relay · 127.0.0.1:8378"}}
+	a.local.relays = []relay.LocalRelay{{Socket: "/private/one", Label: "Windows · 127.0.0.1:8375"}, {Socket: "/private/two", Label: "WSL · Ubuntu · 127.0.0.1:8375"}}
 	tt := ui.NewTester(a.view, 1180, 840)
 	if !tt.HasText("查找本机 Relay") || !tt.HasText("远程电脑邀请") || !tt.HasText(a.local.relays[0].Label) || !tt.HasText(a.local.relays[1].Label) {
 		t.Fatal("missing local discovery or remote invitation")

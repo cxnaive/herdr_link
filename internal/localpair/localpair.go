@@ -50,7 +50,7 @@ func InvitationLink(endpoint, token string, invitation deviceauth.Invitation) (s
 	return "herdr-tcp://" + address + "/#" + values.Encode(), nil
 }
 
-func Listen(runtime string, create func(string) (Response, error)) (func(), error) {
+func Listen(runtime, address string, create func(string) (Response, error)) (func(), error) {
 	listener, err := listenPairing(runtime)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,14 @@ func Listen(runtime string, create func(string) (Response, error)) (func(), erro
 				var req request
 				dec := json.NewDecoder(io.LimitReader(conn, 4096))
 				dec.DisallowUnknownFields()
-				if dec.Decode(&req) != nil || req.Action != "create" {
+				if dec.Decode(&req) != nil {
+					return
+				}
+				if req.Action == "info" {
+					_ = json.NewEncoder(conn).Encode(map[string]string{"protocol": "herdr-local-v1", "address": address})
+					return
+				}
+				if req.Action != "create" {
 					return
 				}
 				response, err := create(req.Name)

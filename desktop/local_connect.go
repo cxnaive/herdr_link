@@ -17,13 +17,17 @@ type localConnections struct {
 }
 
 func (a *application) localRelayView(c *ui.Context) {
-	if runtime.GOOS != "linux" {
+	if !localRelaySupported() {
 		return
 	}
 	busy := a.pairBusy || a.local.searching || a.local.connecting
 	ui.Column(c).Gap(8).MaxWidth(620).Children(func() {
 		ui.Text(c, "本机 Relay").Bold()
-		ui.Text(c, "直接连接当前 Linux 用户的 Relay，无需复制邀请，不经过远程 Gateway。").FontSize(12).TextColor(c.Theme().TextMuted).Wrap()
+		description := "连接当前用户的 Relay，无需复制邀请。"
+		if runtime.GOOS == "windows" {
+			description = "查找 Windows 和已运行的 WSL 中的 Relay，无需复制邀请。"
+		}
+		ui.Text(c, description).FontSize(12).TextColor(c.Theme().TextMuted).Wrap()
 		label := "查找本机 Relay"
 		if a.local.searching {
 			label = "正在查找…"
@@ -40,7 +44,7 @@ func (a *application) localRelayView(c *ui.Context) {
 		ui.Scroll(c).MaxHeight(180).Gap(6).Children(func() {
 			for _, candidate := range a.local.relays {
 				ui.Row(c.Key(candidate.Socket)).AlignItems(ui.Center).Gap(8).Children(func() {
-					ui.Text(c, candidate.Label).Grow(1)
+					ui.Text(c, candidate.Label).Grow(1).Wrap()
 					if ui.Button(c, "连接本机").Disabled(busy || a.store == nil || a.demo).Clicked() {
 						a.connectLocalRelay(candidate)
 					}
@@ -49,6 +53,7 @@ func (a *application) localRelayView(c *ui.Context) {
 		})
 	})
 }
+func localRelaySupported() bool { return runtime.GOOS == "linux" || runtime.GOOS == "windows" }
 func (a *application) findLocalRelays() {
 	if a.store == nil || a.demo || a.local.searching || a.local.connecting {
 		return
@@ -70,7 +75,7 @@ func (a *application) findLocalRelays() {
 			if err != nil {
 				a.local.message = err.Error()
 			} else {
-				a.local.message = "仅列出当前用户的运行实例；点击连接后才创建独立设备凭据。"
+				a.local.message = "选择要连接的 Relay。"
 			}
 		})
 	}()

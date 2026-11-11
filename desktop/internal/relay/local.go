@@ -9,5 +9,5 @@ type LocalRelay struct {
 	Label  string
 }
 
-var ErrLocalUnavailable = errors.New("未找到当前用户可安全连接的本机 Relay；请确认原生 TCP Relay 已启动并提供私有配对 socket")
-var ErrLocalUnsafe = errors.New("本机 Relay 身份或私有 socket 已变化，请重新查找；不会改走远程网关")
+var ErrLocalUnavailable = errors.New("未找到可连接的本机 Relay，请确认 Relay 已在当前用户下启动")
+var ErrLocalUnsafe = errors.New("本机 Relay 身份或配对接口已变化，请重新查找")

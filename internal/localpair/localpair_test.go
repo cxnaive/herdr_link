@@ -17,7 +17,7 @@ import (
 func TestPrivateSocketCreatesInvitationAndCleansUp(t *testing.T) {
 	runtime := t.TempDir()
 	var calls atomic.Int32
-	stop, err := Listen(runtime, func(name string) (Response, error) {
+	stop, err := Listen(runtime, "127.0.0.1:8375", func(name string) (Response, error) {
 		calls.Add(1)
 		return Response{Link: "herdr-tcp://127.0.0.1:8377/#test=" + name}, nil
 	})
@@ -33,7 +33,7 @@ func TestPrivateSocketCreatesInvitationAndCleansUp(t *testing.T) {
 	if err != nil || response.Link != "herdr-tcp://127.0.0.1:8377/#test=phone" {
 		t.Fatalf("create: %v", err)
 	}
-	if other, err := Listen(runtime, func(string) (Response, error) { return Response{}, nil }); err == nil {
+	if other, err := Listen(runtime, "127.0.0.1:8375", func(string) (Response, error) { return Response{}, nil }); err == nil {
 		other()
 		t.Fatal("replaced active socket")
 	}
@@ -65,7 +65,7 @@ func TestPrivateSocketRefusesUnsafePaths(t *testing.T) {
 				_ = os.Mkdir(dir, 0700)
 				_ = os.WriteFile(socketPath(runtime), []byte("keep"), 0600)
 			}
-			if stop, err := Listen(runtime, func(string) (Response, error) { return Response{}, nil }); err == nil {
+			if stop, err := Listen(runtime, "127.0.0.1:8375", func(string) (Response, error) { return Response{}, nil }); err == nil {
 				stop()
 				t.Fatal("unsafe path accepted")
 			}

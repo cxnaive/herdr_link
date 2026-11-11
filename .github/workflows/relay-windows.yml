@@ -100,6 +100,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows Codex ownership tests failed.' }
           go test -count=1 ./internal/pathidentity
           if ($LASTEXITCODE -ne 0) { throw 'Windows path identity tests failed.' }
+          go test -count=1 ./internal/localpair -run TestInfo
+          if ($LASTEXITCODE -ne 0) { throw 'Local discovery metadata test failed.' }
+      - name: Direct local desktop enrollment and reconnect without Gateway
+        run: |
+          $env:HERDR_TEST_RELAY_BINARY = (Resolve-Path dist/windows/herdr-mobile-relay.exe).Path
+          Push-Location desktop
+          try {
+            go test -count=1 -timeout=90s ./internal/relay -run 'TestWindowsLocal|TestWindowsAdmin|TestWSLDistro'
+            if ($LASTEXITCODE -ne 0) { throw 'Direct Windows Relay connection failed.' }
+          } finally {
+            Pop-Location
+          }
       - name: Install pinned real Herdr (entire ConPTY package)
         run: |
           $zip = Join-Path $env:RUNNER_TEMP 'herdr-0.9.5-windows.zip'

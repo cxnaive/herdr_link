@@ -19,7 +19,7 @@ HERDR_RELAY_ENV=/绝对路径/relay.env /实际安装目录/run.sh tcp-pair '我
 
 在客户端选择“添加电脑”，扫码或粘贴 `herdr-tcp://` 邀请，填写电脑名称。每个新客户端应单独生成邀请。
 
-Linux 客户端连接同一用户的本机 Relay 时，可直接选择“查找本机 Relay → 连接本机”，不需要复制邀请。
+Windows / Linux 客户端连接同一用户的本机 Relay 时，可直接选择“查找本机 Relay → 连接本机”，不需要复制邀请。Windows 原生 Relay 需同步更新；Windows 客户端还可发现已运行的 WSL 中默认 Linux 用户的 Relay（发行版内需 Python 3.9+），详见[本机连接](desktop/README.md#windows--linux-连接本机-relay)。
 
 ## 首次部署
 

@@ -35,7 +35,9 @@ Relay 保持运行，再开一个 PowerShell：
 ./run.ps1 tcp-pair '我的手机'
 ```
 
-客户端粘贴生成的 `herdr-tcp://` 邀请，填写电脑名称。Windows、Linux、macOS、Android 客户端均通过现有 Gateway / E2EE 协议连接。Windows 客户端的“本机 Relay 自动发现”不在本预览范围，仍使用邀请连接。
+客户端粘贴生成的 `herdr-tcp://` 邀请，填写电脑名称。Windows、Linux、macOS、Android 客户端均通过现有 Gateway / E2EE 协议连接。
+
+同一台 Windows 电脑上的客户端也可以使用“添加电脑 → 查找本机 Relay → 连接本机”，直接连接当前 Windows 用户的 Relay，无需复制邀请或经过 Gateway。需同步更新客户端和 Relay。发现过程不创建邀请，选择后才授权；原有设备身份、草稿与角色保持不变。Windows 客户端也支持连接已运行的 WSL 中的 Relay，要求发行版内有 Python 3.9+，详见[本机连接](../desktop/README.md#windows--linux-连接本机-relay)。
 
 这是**前台运行预览**，尚未安装 Windows Service／计划任务；关闭 Relay 进程会断开客户端，不会关闭 Herdr 的终端。不要同时启动两个使用同一配置的 Relay。
 

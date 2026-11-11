@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
-	"runtime"
 	"time"
 
 	"github.com/cxnaive/herdr-desktop/internal/pdfview"
@@ -228,7 +227,7 @@ func main() {
 				}
 				if len(app.machines) == 0 {
 					app.pairing = true
-					if runtime.GOOS == "linux" {
+					if localRelaySupported() {
 						app.findLocalRelays()
 					}
 				}

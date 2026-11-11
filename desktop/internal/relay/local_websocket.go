@@ -18,6 +18,10 @@ type localWebSocket struct{ conn *websocket.Conn }
 // Only literal loopback addresses are permitted. This route cannot become a
 // remote WebSocket client through DNS, HTTP proxy settings or redirects.
 func dialLoopbackWebSocket(ctx context.Context, address string) (logicalWire, error) {
+	return dialLocalWebSocket(ctx, address, (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext)
+}
+
+func dialLocalWebSocket(ctx context.Context, address string, dial func(context.Context, string, string) (net.Conn, error)) (logicalWire, error) {
 	host, port, err := net.SplitHostPort(address)
 	ip := net.ParseIP(host)
 	if err != nil || ip == nil || !ip.IsLoopback() || port == "" {
@@ -27,7 +31,7 @@ func dialLoopbackWebSocket(ctx context.Context, address string) (logicalWire, er
 		if addr != address {
 			return nil, ErrLocalUnsafe
 		}
-		return (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext(ctx, "tcp", address)
+		return dial(ctx, "tcp", address)
 	}}
 	defer transport.CloseIdleConnections()
 	dialCtx, cancel := context.WithTimeout(ctx, 8*time.Second)

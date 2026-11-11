@@ -6,6 +6,7 @@ project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Connect Windows Desktop directly to the current user's native Relay or a Relay in a running WSL distribution, without a Gateway or copying invitations. Preserve device credentials and drafts across reconnects, and keep WSL distributions separate even when their Relay ports match.
 - Operate current Pi selectors and input dialogs, OMP approval/Ask dialogs, and native HTML forms through exact-target controls. HTML fields stay in the upstream form: insert text, move between fields, and explicitly submit only at the final control; hidden/private input and unrecognized layouts remain terminal-only.
 - Bind native Windows x64 Codex terminals to their verified sessions, enabling structured history, prompts, approvals and run state. Shared runtimes also support model/reasoning settings; embedded runtimes retain their terminal-only settings interface.
 

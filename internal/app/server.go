@@ -1417,7 +1417,7 @@ func (s *Server) Run(ctx context.Context) error {
 			_ = ln.Close()
 			return errors.New("native TCP requires device authentication")
 		}
-		stopPairing, err := localpair.Listen(s.cfg.RuntimeDir, func(name string) (localpair.Response, error) {
+		stopPairing, err := localpair.Listen(s.cfg.RuntimeDir, ln.Addr().String(), func(name string) (localpair.Response, error) {
 			invitation, err := s.deviceAuth.CreateInvitation(name, deviceauth.RoleController, "zh")
 			if err != nil {
 				return localpair.Response{}, err

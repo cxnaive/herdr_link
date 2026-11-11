@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -58,7 +57,7 @@ func (a *application) pairView(c *ui.Context) {
 	ui.Scroll(c).Fill().Padding(40).Gap(18).Children(func() {
 		ui.Text(c, "连接你的电脑").FontSize(26).Bold()
 		intro := "粘贴邀请链接，连接运行 Agent 的电脑。"
-		if runtime.GOOS == "linux" {
+		if localRelaySupported() {
 			intro = "连接本机 Relay，或粘贴邀请连接远程电脑。"
 		}
 		ui.Text(c, intro).TextColor(t.TextMuted).Wrap()

@@ -74,11 +74,15 @@ CI 在 macOS 15 的 Apple Silicon / Intel 原生 runner 上运行测试，并安
 
 配对信息与草稿加密保存在用户配置目录的 `Herdr Desktop/state.enc`。加密密钥保存在 Windows Credential Manager、macOS Keychain 或 Linux Secret Service。不要导入手机或 Relay 主密钥替代独立配对。
 
-### Linux 连接本机 Relay
+### Windows / Linux 连接本机 Relay
 
-“添加电脑 → 查找本机 Relay → 连接本机”可以发现同一 Linux 用户下的本机实例。首次空列表会查找，但不会自动授权。
+“添加电脑 → 查找本机 Relay → 连接本机”可以发现当前用户的本机实例。首次空列表会查找，选择实例后才配对。
 
-本机连接走回环 E2EE WebSocket，不经过 Gateway。它通过 Relay 的私有配对 socket 申请独立设备授权，不读取 `relay.env` 或设备库，不提取主密钥。已配对同一 Relay 时保留电脑身份、草稿与角色。
+Windows 客户端同时列出 **Windows 原生 Relay** 和**已运行的 WSL 发行版中的 Relay**，并标明来源。原生 Relay 需更新到支持本机发现的版本，客户端与 Relay 使用同一 Windows 用户。WSL 使用各发行版的默认 Linux 用户发现实例；发行版内需安装 Python 3.9+，无需额外 Python 包。只扫描已运行的发行版，不负责启动 WSL 或 Relay。
+
+本机连接走回环 E2EE WebSocket，不经过 Gateway。Windows 原生通过核对服务进程及用户的命名管道申请独立设备授权；Linux / WSL 核对私有配对 socket 和进程身份。不读取 `relay.env` 或设备库，不提取主密钥。已配对同一 Relay 时保留电脑身份、草稿与角色。
+
+WSL 连接通过隐藏的 `wsl.exe` 辅助进程在选定发行版内建立回环通道，不依赖 Windows 到 WSL 的 localhost 转发、WSL IP 或额外监听端口。多个发行版使用相同端口也不会互相覆盖。保存的连接绑定发行版、Linux 用户与 Relay 路径；Relay 重启后复用原凭据，WSL 停止时提示离线。
 
 需要同一用户、可读取其 `/proc` 元数据、可信私有配对 socket 和回环地址服务。容器跨用户 / PID 空间、其他用户的 Relay 或未提供配对接口的版本不会自动连接；仍可使用远程邀请。凭据被撤销后不会静默重新授权。
 

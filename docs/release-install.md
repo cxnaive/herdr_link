@@ -85,4 +85,4 @@ sh herdr-link-desktop-@VERSION@-linux-amd64-install.sh herdr-link-desktop-@VERSI
 
 在 Client 中“添加电脑”，粘贴 Relay 生成的 `herdr-tcp://` 邀请。每个 Client 独立配对。Gateway 的 `herdr-gateway://` 接入码是给电脑 Relay 的，不要填入 Client。
 
-Linux 同用户的本机 Relay 可用“查找本机 Relay”连接。macOS 本机 Relay 自动发现尚未接入，使用远程配对邀请。
+Windows / Linux 同用户的本机 Relay 可用“查找本机 Relay”连接。Windows 客户端也可连接已运行 WSL 中默认 Linux 用户的 Relay，发行版需 Python 3.9+。macOS 本机 Relay 自动发现尚未接入，使用远程配对邀请。
