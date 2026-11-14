@@ -1030,7 +1030,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
     fun manageRelay(id: String) {
         AlertDialog.Builder(context).setTitle(relayName(id)).setItems(arrayOf("已配对设备", "邀请新设备", "工作区 / Worktree", "创建工作区", "活动记录", "Pi 集成", "检查 relay 更新", "版本与能力")) { _, i -> when (i) {
             0 -> devices(id)
-            1 -> form("邀请设备", listOf("设备名称" to "Android", "权限（reader/controller）" to "reader")) { values -> if (values[1] !in listOf("reader", "controller")) toast("权限必须是 reader 或 controller") else createInvitation(id, values[0], values[1]) }
+            1 -> DeviceInvitationDialog.show(context) { name, role -> createInvitation(id, name, role) }
             2 -> workspaceManager(id)
             3 -> form("创建工作区", listOf("绝对路径" to "", "名称" to "")) { relayCommand(id, "workspace_create", JSONObject().put("cwd", it[0]).put("label", it[1])) }
             4 -> activity(id)

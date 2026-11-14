@@ -5,6 +5,9 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Choose Reader or Controller from a labeled Android invitation-permissions dropdown instead of typing a role name. New invitations still default to Reader; the inviting device must already have Controller permission.
+
 ## [0.3.3] - 2026-11-11
 
 ### Added
