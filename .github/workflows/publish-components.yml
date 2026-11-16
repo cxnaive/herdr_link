@@ -89,7 +89,7 @@ jobs:
           git checkout --detach origin/feat/android-file-companion
           python3 scripts/project_release.py docs dist/promotion
           git diff --check
-          git add -- README.md VERSION.json herdr-android/README.md desktop/README.md
+          git add -- README.md README.en.md VERSION.json herdr-android/README.md desktop/README.md
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m 'docs(release): refresh CI-published downloads'

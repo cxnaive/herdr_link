@@ -62,6 +62,64 @@ def download_blocks(record):
     return {'native-downloads': native, 'android-downloads': android, 'desktop-downloads': desktop}
 
 
+def english_download_blocks(record):
+    version, tag = record['version'], record['tag']
+    base = f'https://github.com/{REPO}/releases/download/{tag}'
+    page = f'https://github.com/{REPO}/releases/tag/{tag}'
+    assets = record.get('assets', {})
+    has_arm = f'herdr-link-relay-{version}-linux-arm64.tar.gz' in assets
+    native = [
+        '### Server packages',
+        f'**[Herdr Link {tag}]({page})** · Relay and Gateway share the project version',
+        '| Component | Linux x86_64 |' + (' Linux ARM64 |' if has_arm else ''),
+        '| --- | --- |' + (' --- |' if has_arm else ''),
+    ]
+    for component, name in [('relay', 'Relay'), ('gateway', 'Gateway')]:
+        row = f'| {name} | [Deployment package]({base}/herdr-link-{component}-{version}-linux-amd64.tar.gz) |'
+        if has_arm:
+            row += f' [Deployment package]({base}/herdr-link-{component}-{version}-linux-arm64.tar.gz) |'
+        native.append(row)
+    native_block = '\n\n'.join(native[:2]) + '\n\n' + '\n'.join(native[2:])
+    native_block += f'\n\n[Checksums]({base}/SHA256SUMS.txt) · [Installation instructions]({base}/INSTALL.md) · [Deployment guide](docs/native-deployment.md)'
+    native_block += '\n\nComplete packages include the executable, configuration, and service templates. '
+    native_block += ('Choose amd64 (x86_64) or arm64 (aarch64) for your host. macOS server binaries are available only as standalone CI artifacts.' if has_arm else
+                     'ARM64 and macOS standalone CI binaries are not complete deployment packages in this release.')
+    if f'herdr-link-relay-{version}-windows-amd64.zip' in assets:
+        native_block += f'\n\n**Windows x86_64 Relay:** [Complete ZIP]({base}/herdr-link-relay-{version}-windows-amd64.zip) · [Installation instructions]({base}/INSTALL.md). Requires native Herdr and PowerShell 7, running as the same ordinary user.'
+    android = f"""#### Download Android APKs
+
+**[Herdr Link {tag} · Android]({page})** · Android 9 or later
+
+| Device | APK |
+| --- | --- |
+| Most phones and tablets | [arm64-v8a]({base}/herdr-link-android-{version}-arm64-v8a.apk) |
+| 32-bit ARM | [armeabi-v7a]({base}/herdr-link-android-{version}-armeabi-v7a.apk) |
+| x86_64 devices and emulators | [x86_64]({base}/herdr-link-android-{version}-x86_64.apk) |
+
+Install over the existing app; **do not uninstall it first**. Published APKs retain the Pocket application ID and signing identity, preserving pairing and drafts. Locally signed APKs may not be installable over a published build. Debug APKs remain in CI, not in the formal release downloads."""
+    desktop = f"""### Desktop downloads
+
+**[Herdr Link {tag} · Desktop]({page})**
+
+| Platform | Installation |
+| --- | --- |
+| Windows x86_64 | [Portable ZIP]({base}/herdr-link-desktop-{version}-windows-amd64.zip); extract and run `Herdr Desktop.exe` |
+| Debian / Ubuntu x86_64 | [Debian package]({base}/herdr-link-desktop-{version}-linux-amd64.deb); install with `sudo apt install ./filename.deb` |
+| Linux x86_64 user installation | [Archive]({base}/herdr-link-desktop-{version}-linux-amd64.tar.gz) + [Installer]({base}/herdr-link-desktop-{version}-linux-amd64-install.sh) |"""
+    if f'herdr-link-desktop-{version}-linux-arm64.deb' in assets:
+        desktop += f"""
+| Debian / Ubuntu ARM64 | [Debian package]({base}/herdr-link-desktop-{version}-linux-arm64.deb); install with `sudo apt install ./filename.deb` |
+| Linux ARM64 user installation | [Archive]({base}/herdr-link-desktop-{version}-linux-arm64.tar.gz) + [Installer]({base}/herdr-link-desktop-{version}-linux-arm64-install.sh) |"""
+    if f'herdr-link-desktop-{version}-macos-universal.dmg' in assets:
+        desktop += f'\n| macOS 12+ · Apple Silicon / Intel | [Universal DMG]({base}/herdr-link-desktop-{version}-macos-universal.dmg); drag the app into Applications |'
+        signing = 'Windows/Linux desktop apps are unsigned. The macOS preview is ad-hoc signed, without Developer ID signing or Apple notarization; first launch may require approval in System Settings.'
+    else:
+        desktop += '\n| macOS | No signed, notarized download; use the source build instructions below |'
+        signing = 'Desktop apps are currently unsigned.'
+    desktop += f'\n\n{signing} Linux requires GTK 3, WebKitGTK 4.1, libsecret, and an unlocked Secret Service keyring. Sharing a project version does not imply equal validation coverage on every platform.'
+    return {'native-downloads': native_block, 'android-downloads': android, 'desktop-downloads': desktop}
+
+
 def update(root, plan, receipt):
     metadata = json.loads((root / 'VERSION.json').read_text())
     metadata['release'] = {'version': plan['manifest']['project']['version'], 'tag': receipt['tag'], 'source_commit': plan['source'], 'build_run_id': plan['build_run_id'], 'release_id': receipt['release_id'], 'assets': receipt['assets']}
@@ -70,10 +128,13 @@ def update(root, plan, receipt):
     blocks = download_blocks(metadata['release'])
     readme = (root / 'README.md').read_text()
     for key, body in blocks.items(): readme = replace_block(readme, key, body)
+    english = (root / 'README.en.md').read_text()
+    for key, body in english_download_blocks(metadata['release']).items(): english = replace_block(english, key, body)
     child = replace_block((root / 'herdr-android/README.md').read_text(), 'android-downloads', blocks['android-downloads'].replace('#### 下载 Android APK', '## 安装', 1))
     desktop = replace_block((root / 'desktop/README.md').read_text(), 'desktop-downloads', blocks['desktop-downloads'].replace('### 桌面客户端下载', '## 下载', 1))
     version = metadata['release']['version']
     readme = re.sub(r'herdr-link-desktop-[0-9]+\.[0-9]+\.[0-9]+-linux-', f'herdr-link-desktop-{version}-linux-', readme)
+    english = re.sub(r'herdr-link-desktop-[0-9]+\.[0-9]+\.[0-9]+-linux-', f'herdr-link-desktop-{version}-linux-', english)
     desktop = re.sub(r'herdr-link-desktop-[0-9]+\.[0-9]+\.[0-9]+-linux-', f'herdr-link-desktop-{version}-linux-', desktop)
-    changes = {root / 'README.md': readme, root / 'herdr-android/README.md': child, root / 'desktop/README.md': desktop, root / 'VERSION.json': json.dumps(metadata, ensure_ascii=False, indent=2) + '\n'}
+    changes = {root / 'README.md': readme, root / 'README.en.md': english, root / 'herdr-android/README.md': child, root / 'desktop/README.md': desktop, root / 'VERSION.json': json.dumps(metadata, ensure_ascii=False, indent=2) + '\n'}
     for p, text in changes.items(): p.write_text(text)

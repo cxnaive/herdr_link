@@ -1,5 +1,7 @@
 # Herdr Link
 
+**简体中文** · [English](README.en.md)
+
 一套连接 **多台 Herdr 电脑与多个客户端**的自托管系统。Relay 负责接入电脑上的 Herdr，Gateway 负责电脑注册和加密流量转发，Android 与桌面客户端提供对话、终端、审批和文件操作界面。
 
 [系统架构](#系统架构) · [Gateway](#gateway) · [Relay](#relay) · [Clients](#clients) · [快速开始](QUICKSTART.md) · [安装与升级](docs/native-deployment.md)
@@ -170,7 +172,7 @@ set -a; . "$HERDR_RELAY_ENV"; set +a
 **Windows x86_64 Relay**：[下载完整 ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-relay-0.3.3-windows-amd64.zip) · [安装说明](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/INSTALL.md)。需原生 Herdr 与 PowerShell 7，使用同一普通用户运行。
 <!-- native-downloads:end -->
 
-Windows 原生 Relay 的 CI 预览、安装步骤和功能限制见 [Windows Relay](docs/windows-relay.md)。通过 `relay-windows` 的成功 CI 附件获取；尚未加入正式 Release。
+Windows 原生 Relay 已包含在上方统一 Release 中；安装步骤和功能限制见 [Windows Relay](docs/windows-relay.md)。尚未发布的改动可通过 `relay-windows` 的成功 CI 附件试用。
 
 ## Clients
 

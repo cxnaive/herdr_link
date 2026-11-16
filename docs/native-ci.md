@@ -75,7 +75,7 @@ Actions 中显示为 **publish-release**。预演核对可信分支／提交、C
 
 发布结果是 **Herdr Link vX.Y.Z**、标签 **vX.Y.Z**，包含全套下载并设为 Latest。发布器创建草稿、上传并校验全部附件后才公开。遇到已有标签或不同附件拒绝覆盖；不得 `--clobber`、移动标签或上传本地替代包。
 
-发布后从回执自动更新根 README、Android / Desktop README 的下载区，以及 `VERSION.json` 中的统一 `release` 记录。系统框图和 Android 小节的 1×4 截图不变。**文档更新失败时，发布任务仍未完成。**
+发布后从回执自动更新根 README（中文 `README.md` 与英文 `README.en.md`）、Android / Desktop README 的下载区，以及 `VERSION.json` 中的统一 `release` 记录。系统框图和 Android 小节的 1×4 截图不变。**文档更新失败时，发布任务仍未完成。**
 
 ## 签名与旧安装
 
