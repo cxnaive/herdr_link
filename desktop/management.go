@@ -463,7 +463,18 @@ func (a *application) managementView(c *ui.Context) {
 			ui.Spinner(c).Size(18, 18)
 		}
 		if d.message != "" {
-			ui.Text(c, d.message).FontSize(12).Selectable()
+			if d.kind == "agent_start" {
+				title, color := "创建失败", c.Theme().Danger
+				if a.operations[key] != "" {
+					title, color = "创建结果待确认", c.Theme().Warning
+				}
+				ui.Column(c).FillWidth().Padding(12).Gap(6).Border(1, color).Radius(8).Role(ui.RoleAlert).Children(func() {
+					ui.Text(c, title).Bold().FontSize(14).TextColor(color)
+					ui.Text(c, d.message).FontSize(13).TextColor(color).Wrap().Selectable()
+				})
+			} else {
+				ui.Text(c, d.message).FontSize(12).Selectable()
+			}
 		}
 		action := d.kind
 		if action == "settings" {

@@ -11,6 +11,9 @@ project follows [Semantic Versioning](https://semver.org/).
 ### Changed
 - Choose Reader or Controller from a labeled Android invitation-permissions dropdown instead of typing a role name. New invitations still default to Reader; the inviting device must already have Controller permission.
 
+### Fixed
+- Clearly mark desktop Agent creation errors with a red failure panel and the reason, while keeping the form intact for correction. Unconfirmed creation results remain labeled as pending verification, not definite failures.
+
 ## [0.3.3] - 2026-11-11
 
 ### Added

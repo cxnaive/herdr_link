@@ -137,6 +137,96 @@ func TestDesktopManagementMenusAndNewAgentForm(t *testing.T) {
 		t.Fatal("changed defaults were dispatched", d.message)
 	}
 }
+func TestNewAgentFailureIsVisibleAndPreservesForm(t *testing.T) {
+	for _, theme := range []string{"light", "dark"} {
+		t.Run(theme, func(t *testing.T) {
+			a, m, _ := managementFixture(t)
+			a.appearance.Application = theme
+			tt := ui.NewTester(a.view, 1000, 768)
+			if err := tt.Click("在 机器人研究 新建 Agent"); err != nil {
+				t.Fatal(err)
+			}
+			if tt.HasText("创建失败") {
+				t.Fatal("fresh form shows an error")
+			}
+			field, ok := tt.AccessByRole(ui.RoleTextField, "名称")
+			if !ok {
+				t.Fatal("name input missing")
+			}
+			tt.ClickAt(field.Bounds.X+field.Bounds.W/2, field.Bounds.Y+field.Bounds.H/2)
+			tt.Type("EMHI_data")
+			d := a.management
+			d.prompt = "保留这段任务"
+			d.arguments = "--model demo"
+			tt.Frame()
+			if err := tt.Click("创建 Agent"); err != nil {
+				t.Fatal(err)
+			}
+			if !tt.HasText("创建失败") || !tt.HasText("名称须以小写字母开头，最多 32 位，可含数字、_ 和 -") {
+				t.Fatal("validation failure not clearly displayed", tt.Texts())
+			}
+			if a.management != d || d.busy || d.name != "EMHI_data" || d.prompt != "保留这段任务" || d.arguments != "--model demo" {
+				t.Fatalf("failure closed or reset the form: same=%v busy=%v name=%q prompt=%q args=%q", a.management == d, d.busy, d.name, d.prompt, d.arguments)
+			}
+			if len(a.operations) != 0 || len(a.busyOperations) != 0 {
+				t.Fatal("invalid form dispatched a write")
+			}
+			if dir := os.Getenv("HERDR_MANAGEMENT_FAILURE_SCREENSHOTS"); dir != "" {
+				f, err := os.Create(filepath.Join(dir, "launch-failure-"+theme+".png"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+				if err := png.Encode(f, tt.Image()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// A corrected name reaches the storage guard, without a live write.
+			d.name = "emhi_data"
+			m.capabilities = map[string]bool{"agent_launch_args_v1": true}
+			a.store = nil
+			tt.Frame()
+			if err := tt.Click("创建 Agent"); err != nil {
+				t.Fatal(err)
+			}
+			if !tt.HasText("创建失败") || !tt.HasText("加密存储尚未就绪") || tt.HasText("名称须以小写字母开头，最多 32 位，可含数字、_ 和 -") {
+				t.Fatal("retry did not replace the previous error", tt.Texts())
+			}
+			if err := tt.Click("关闭"); err != nil {
+				t.Fatal(err)
+			}
+			if err := tt.Click("在 机器人研究 新建 Agent"); err != nil {
+				t.Fatal(err)
+			}
+			if tt.HasText("创建失败") {
+				t.Fatal("new dialog retained the previous failure")
+			}
+		})
+	}
+}
+
+func TestNewAgentUnknownOutcomeIsNotShownAsFailure(t *testing.T) {
+	a, m, _ := managementFixture(t)
+	a.openLaunch(m, m.workspaces[0])
+	d := a.management
+	d.name = "review"
+	d.message = "连接中断，请先核对电脑上的实际创建结果"
+	key := launchKey(m, d.workspace)
+	if err := a.setOperation(key, "agent_start"); err != nil {
+		t.Fatal(err)
+	}
+	tt := ui.NewTester(a.view, 1000, 768)
+	if !tt.HasText("创建结果待确认") || tt.HasText("创建失败") || !tt.HasText(d.message) {
+		t.Fatal("unknown outcome was presented as a definite failure", tt.Texts())
+	}
+	if err := tt.Click("创建 Agent"); err != nil {
+		t.Fatal(err)
+	}
+	if a.operations[key] != "agent_start" || a.busyOperations[key] || d.busy {
+		t.Fatal("unknown outcome allowed a duplicate write")
+	}
+}
+
 func TestReaderCannotUseManagementAndQuestionsStayScoped(t *testing.T) {
 	a, m, chat := managementFixture(t)
 	m.config.Auth.Role = "reader"
