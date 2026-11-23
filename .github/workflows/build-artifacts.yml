@@ -195,7 +195,7 @@ jobs:
 
       - name: Build and test Android app
         working-directory: herdr-android
-        run: ./gradlew --no-daemon -PsplitApks=true testDebugUnitTest assembleDebug assembleRelease assembleDebugAndroidTest lintDebug
+        run: ./gradlew --no-daemon --stacktrace -PsplitApks=true testDebugUnitTest assembleDebug assembleRelease assembleDebugAndroidTest lintDebug
 
       - name: Collect APKs without publishing a trusted signature
         run: python3 scripts/android-artifacts.py collect herdr-android/app/build/outputs/apk dist/android-ci

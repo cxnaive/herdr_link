@@ -12,6 +12,8 @@
 
 Linux amd64 与 arm64 使用各自原生 runner。两种架构都运行服务端隔离配对测试、桌面 GTK / PDF / 钥匙环测试，并校验 ELF 架构、终端库散列和 Debian 架构字段。统一 Release 缺少任何一个架构的产物都会失败。
 
+Android 的 Gradle 插件和 Maven Central 依赖优先使用 Google 托管的 Central 镜像，减少共享 CI 出口遇到 HTTP 429 限流的影响；保留原 Central 仓库作为缺失制品的后备。Robolectric 自行下载的 Android SDK JAR 也使用同一镜像。依赖版本不变，不跳过测试；下载失败仍会阻止签名和发布，Gradle 日志保留异常堆栈用于定位。
+
 ## 下载日常构建（不创建 Release）
 
 小更新直接 commit / push 即可，默认只做检查和按组件构建。**不会创建标签、GitHub Release、更新正式版下载链接或自动部署**；需要正式发布新版本时，再执行后面的准备版本和发布步骤。

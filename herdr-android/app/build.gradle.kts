@@ -61,8 +61,10 @@ dependencies {
     androidTestImplementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
 }
 
-// Optional local build proxy is supplied by the caller, never stored as a workstation setting.
 tasks.withType<Test>().configureEach {
+    // Robolectric downloads Android SDK jars outside Gradle's repository resolver.
+    systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2/")
+    // Optional local build proxy is supplied by the caller, never stored as a workstation setting.
     for (key in listOf("socksProxyHost", "socksProxyPort", "http.nonProxyHosts", "https.proxyHost", "https.proxyPort")) {
         System.getProperty(key)?.let { systemProperty(key, it) }
     }
