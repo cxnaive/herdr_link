@@ -212,18 +212,18 @@ Give the resulting `herdr-tcp://` invitation to the client. This is different fr
 <!-- native-downloads:start -->
 ### Server packages
 
-**[Herdr Link v0.3.3](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.3)** · Relay and Gateway share the project version
+**[Herdr Link v0.3.4](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.4)** · Relay and Gateway share the project version
 
 | Component | Linux x86_64 | Linux ARM64 |
 | --- | --- | --- |
-| Relay | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-relay-0.3.3-linux-amd64.tar.gz) | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-relay-0.3.3-linux-arm64.tar.gz) |
-| Gateway | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-gateway-0.3.3-linux-amd64.tar.gz) | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-gateway-0.3.3-linux-arm64.tar.gz) |
+| Relay | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-relay-0.3.4-linux-amd64.tar.gz) | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-relay-0.3.4-linux-arm64.tar.gz) |
+| Gateway | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-gateway-0.3.4-linux-amd64.tar.gz) | [Deployment package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-gateway-0.3.4-linux-arm64.tar.gz) |
 
-[Checksums](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/SHA256SUMS.txt) · [Installation instructions](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/INSTALL.md) · [Deployment guide](docs/native-deployment.md)
+[Checksums](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/SHA256SUMS.txt) · [Installation instructions](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/INSTALL.md) · [Deployment guide](docs/native-deployment.md)
 
 Complete packages include the executable, configuration, and service templates. Choose amd64 (x86_64) or arm64 (aarch64) for your host. macOS server binaries are available only as standalone CI artifacts.
 
-**Windows x86_64 Relay:** [Complete ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-relay-0.3.3-windows-amd64.zip) · [Installation instructions](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/INSTALL.md). Requires native Herdr and PowerShell 7, running as the same ordinary user.
+**Windows x86_64 Relay:** [Complete ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-relay-0.3.4-windows-amd64.zip) · [Installation instructions](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/INSTALL.md). Requires native Herdr and PowerShell 7, running as the same ordinary user.
 <!-- native-downloads:end -->
 
 ## Clients
@@ -264,13 +264,13 @@ A native Android client with paginated conversation history, collapsible tool ca
 <!-- android-downloads:start -->
 #### Download Android APKs
 
-**[Herdr Link v0.3.3 · Android](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.3)** · Android 9 or later
+**[Herdr Link v0.3.4 · Android](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.4)** · Android 9 or later
 
 | Device | APK |
 | --- | --- |
-| Most phones and tablets | [arm64-v8a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-android-0.3.3-arm64-v8a.apk) |
-| 32-bit ARM | [armeabi-v7a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-android-0.3.3-armeabi-v7a.apk) |
-| x86_64 devices and emulators | [x86_64](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-android-0.3.3-x86_64.apk) |
+| Most phones and tablets | [arm64-v8a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-android-0.3.4-arm64-v8a.apk) |
+| 32-bit ARM | [armeabi-v7a](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-android-0.3.4-armeabi-v7a.apk) |
+| x86_64 devices and emulators | [x86_64](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-android-0.3.4-x86_64.apk) |
 
 Install over the existing app; **do not uninstall it first**. Published APKs retain the Pocket application ID and signing identity, preserving pairing and drafts. Locally signed APKs may not be installable over a published build. Debug APKs remain in CI, not in the formal release downloads.
 <!-- android-downloads:end -->
@@ -292,16 +292,16 @@ You can also copy the APK to the phone and install it there. A local build may u
 <!-- desktop-downloads:start -->
 ### Desktop downloads
 
-**[Herdr Link v0.3.3 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.3)**
+**[Herdr Link v0.3.4 · Desktop](https://github.com/cxnaive/herdr_link/releases/tag/v0.3.4)**
 
 | Platform | Installation |
 | --- | --- |
-| Windows x86_64 | [Portable ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-windows-amd64.zip); extract and run `Herdr Desktop.exe` |
-| Debian / Ubuntu x86_64 | [Debian package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-amd64.deb); install with `sudo apt install ./filename.deb` |
-| Linux x86_64 user installation | [Archive](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-amd64.tar.gz) + [Installer](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-amd64-install.sh) |
-| Debian / Ubuntu ARM64 | [Debian package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-arm64.deb); install with `sudo apt install ./filename.deb` |
-| Linux ARM64 user installation | [Archive](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-arm64.tar.gz) + [Installer](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-linux-arm64-install.sh) |
-| macOS 12+ · Apple Silicon / Intel | [Universal DMG](https://github.com/cxnaive/herdr_link/releases/download/v0.3.3/herdr-link-desktop-0.3.3-macos-universal.dmg); drag the app into Applications |
+| Windows x86_64 | [Portable ZIP](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-windows-amd64.zip); extract and run `Herdr Desktop.exe` |
+| Debian / Ubuntu x86_64 | [Debian package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-amd64.deb); install with `sudo apt install ./filename.deb` |
+| Linux x86_64 user installation | [Archive](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-amd64.tar.gz) + [Installer](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-amd64-install.sh) |
+| Debian / Ubuntu ARM64 | [Debian package](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-arm64.deb); install with `sudo apt install ./filename.deb` |
+| Linux ARM64 user installation | [Archive](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-arm64.tar.gz) + [Installer](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-linux-arm64-install.sh) |
+| macOS 12+ · Apple Silicon / Intel | [Universal DMG](https://github.com/cxnaive/herdr_link/releases/download/v0.3.4/herdr-link-desktop-0.3.4-macos-universal.dmg); drag the app into Applications |
 
 Windows/Linux desktop apps are unsigned. The macOS preview is ad-hoc signed, without Developer ID signing or Apple notarization; first launch may require approval in System Settings. Linux requires GTK 3, WebKitGTK 4.1, libsecret, and an unlocked Secret Service keyring. Sharing a project version does not imply equal validation coverage on every platform.
 <!-- desktop-downloads:end -->
@@ -326,10 +326,10 @@ Choose amd64 for `uname -m` = `x86_64`, or arm64 for `aarch64`. Use the filename
 
 ```sh
 # Debian / Ubuntu:
-sudo apt install ./herdr-link-desktop-0.3.3-linux-amd64.deb
+sudo apt install ./herdr-link-desktop-0.3.4-linux-amd64.deb
 
 # Or install without root, with the script and archive in the same directory:
-sh herdr-link-desktop-0.3.3-linux-amd64-install.sh herdr-link-desktop-0.3.3-linux-amd64.tar.gz
+sh herdr-link-desktop-0.3.4-linux-amd64-install.sh herdr-link-desktop-0.3.4-linux-amd64.tar.gz
 ~/.local/bin/herdr-desktop
 ```
 
