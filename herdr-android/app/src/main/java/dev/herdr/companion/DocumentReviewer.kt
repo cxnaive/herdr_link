@@ -159,7 +159,7 @@ class DocumentReviewer(private val context: Context, private val cwd: String,
         controls.addView(button(if (rawMarkdown) "排版" else "源码", "切换 Markdown 排版与源码") { rawMarkdown = !rawMarkdown; showMarkdown(ref, text) }, LinearLayout.LayoutParams(dp(84), dp(48)))
         controls.addView(label("只读 · 可选择复制", 11f).apply { setTextColor(muted) }, LinearLayout.LayoutParams(0, -2, 1f))
         if (rawMarkdown) { value.typeface = Typeface.MONOSPACE; value.text = text }
-        else Markwon.builder(context).usePlugin(PocketMarkdown(context)).usePlugin(CodexFileCitations.plugin()).usePlugin(TablePlugin.create(context)).usePlugin(StrikethroughPlugin.create())
+        else Markwon.builder(context).usePlugin(PocketMarkdown(context)).usePlugin(CodexFileCitations.plugin()).usePlugin(PocketMath(context, value.textSize)).usePlugin(TablePlugin.create(context)).usePlugin(StrikethroughPlugin.create())
             .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
                 override fun configureConfiguration(builder: io.noties.markwon.MarkwonConfiguration.Builder) { builder.linkResolver { _, link -> openLink(link, ref) } }
             }).build().setMarkdown(value, text)

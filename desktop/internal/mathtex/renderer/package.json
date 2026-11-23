@@ -1,0 +1,13 @@
+{
+  "name": "herdr-native-math-renderer",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "mathjax-full": "3.2.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.5"
+  }
+}

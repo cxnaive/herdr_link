@@ -18,27 +18,33 @@ object CodexFileCitations {
     private const val prefix = ":codex-file-citation{"
     private data class Citation(val start: Int, val end: Int, val raw: String, val path: String)
 
-    fun configure(builder: Parser.Builder) {
+    fun configure(builder: Parser.Builder) = configure(builder, false)
+
+    internal fun configure(builder: Parser.Builder, math: Boolean) {
         builder.inlineParserFactory { context ->
             // The app pins CommonMark 0.13.0 (via Markwon 4.6.2). Delegate all normal
             // Markdown to its existing parser; only the file directive is extended.
             val delegate = InlineParserImpl(context)
             InlineParser { input, block ->
-                val citations = find(input)
-                if (citations.isEmpty()) delegate.parse(input, block)
-                else {
-                    var tokenPrefix = "HERDRFILECITATIONTOKEN"
-                    while (input.contains(tokenPrefix)) tokenPrefix += "X"
-                    val tokens = citations.mapIndexed { index, citation -> "${tokenPrefix}${index}END" to citation }.toMap()
-                    val protected = StringBuilder()
-                    var offset = 0
-                    tokens.forEach { (token, citation) ->
-                        protected.append(input, offset, citation.start).append(token); offset = citation.end
+                fun parse(value: String) {
+                    val input = value
+                    val citations = find(input)
+                    if (citations.isEmpty()) delegate.parse(input, block)
+                    else {
+                        var tokenPrefix = "HERDRFILECITATIONTOKEN"
+                        while (input.contains(tokenPrefix)) tokenPrefix += "X"
+                        val tokens = citations.mapIndexed { index, citation -> "${tokenPrefix}${index}END" to citation }.toMap()
+                        val protected = StringBuilder()
+                        var offset = 0
+                        tokens.forEach { (token, citation) ->
+                            protected.append(input, offset, citation.start).append(token); offset = citation.end
+                        }
+                        protected.append(input, offset, input.length)
+                        delegate.parse(protected.toString(), block)
+                        restore(block, tokens)
                     }
-                    protected.append(input, offset, input.length)
-                    delegate.parse(protected.toString(), block)
-                    restore(block, tokens)
                 }
+                if (math) PocketMathSyntax.parse(input, block, ::parse) else parse(input)
             }
         }
     }

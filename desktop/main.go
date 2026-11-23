@@ -110,6 +110,7 @@ type machine struct {
 	fileCancel     context.CancelFunc
 }
 type application struct {
+	math                           *nativeMath
 	local                          localConnections
 	win                            *mygo.Window
 	ctx                            context.Context

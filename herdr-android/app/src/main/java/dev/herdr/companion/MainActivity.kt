@@ -683,7 +683,7 @@ class MainActivity : ComponentActivity() {
                 }; holder.addView(editor, FrameLayout.LayoutParams(-1, -1))
             } else {
                 val text = label(draft, 15, ink).apply { setLineSpacing(0f, 1f); setTextIsSelectable(true); setPadding(dp(12), dp(12), dp(12), dp(24)) }
-                if (FileRules.isMarkdown(doc.optString("path"))) Markwon.builder(this).usePlugin(PocketMarkdown(this)).usePlugin(CodexFileCitations.plugin()).usePlugin(TablePlugin.create(this)).usePlugin(StrikethroughPlugin.create())
+                if (FileRules.isMarkdown(doc.optString("path"))) Markwon.builder(this).usePlugin(PocketMarkdown(this)).usePlugin(CodexFileCitations.plugin()).usePlugin(PocketMath(this, text.textSize)).usePlugin(TablePlugin.create(this)).usePlugin(StrikethroughPlugin.create())
                     .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
                         override fun configureConfiguration(builder: io.noties.markwon.MarkwonConfiguration.Builder) { builder.linkResolver { _, link ->
                             val ref = ReviewReferences.local(link, selectedBinding()?.cwd.orEmpty(), doc.optString("path"), unrestricted = relayId in unrestrictedFiles)

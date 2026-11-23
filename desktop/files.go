@@ -382,7 +382,7 @@ func (a *application) fileView(c *ui.Context, m *machine, chat *conversation) {
 					if f.document != nil && f.document.Kind == "text" {
 						ext := strings.ToLower(path.Ext(f.document.Path))
 						if ext == ".md" || ext == ".markdown" {
-							markdown.View(c, citationMarkdown(string(f.document.Data)), f.md)
+							a.markdownView(c, citationMarkdown(string(f.document.Data)), f.md)
 						} else {
 							ui.Text(c, string(f.document.Data)).Font("monospace").FontSize(12).Selectable()
 						}

@@ -21,3 +21,8 @@ The old TypeScript connection bridge and frontend bundles are not required to bu
 Bundled terminal typeface, SIL Open Font License 1.1. See
 `third_party/inconsolata/UPSTREAM.md` and `OFL.txt`; the license is also included
 in APK assets as `Inconsolata-OFL.txt`.
+
+## Native mathematics
+
+- Markwon LaTeX extension and inline-parser **4.6.2**: Apache-2.0, matching the existing Markwon core. https://github.com/noties/Markwon/tree/v4.6.2
+- JLaTeXMath Android **0.2.0**: GPL-2.0-or-later with the upstream linking exception. Unmodified corresponding source, license and provenance are in `third_party/jlatexmath/`; the license is also included in APK assets.

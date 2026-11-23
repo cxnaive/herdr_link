@@ -206,6 +206,7 @@ func (a *application) configureChatMarkdown(m *machine, chat *conversation) {
 	chat.images = nil
 	chat.md = &markdown.Options{WrapCode: true, OnLink: func(dest string) { a.openReference(m, chat, "", dest) }}
 	chat.md.Block = standaloneLinkBlock(chat.md.OnLink)
+	a.configureMath(chat.md)
 }
 func (a *application) configureFileMarkdown(m *machine, chat *conversation, f *fileBrowser) {
 	base := f.previewPath
@@ -224,6 +225,7 @@ func (a *application) configureFileMarkdown(m *machine, chat *conversation, f *f
 	}
 	f.md.WrapCode = true
 	f.md.Block = standaloneLinkBlock(f.md.OnLink)
+	a.configureMath(f.md)
 	f.md.LoadImage = func(source string) (ui.ImageSource, error) {
 		ctx, cancel := context.WithTimeout(s.Context, 30*time.Second)
 		defer cancel()

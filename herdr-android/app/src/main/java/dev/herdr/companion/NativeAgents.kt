@@ -124,7 +124,7 @@ class NativeAgents(private val context: Context, private val engine: RelayEngine
             val existing = markdownRenderer
             if (existing != null && markdownTheme == PocketAppearance.current) return existing
             val built = Markwon.builder(context).usePlugin(PocketMarkdown(context))
-                .usePlugin(CodexFileCitations.plugin())
+                .usePlugin(CodexFileCitations.plugin()).usePlugin(PocketMath(context))
                 .usePlugin(TablePlugin.create(context))
                 .usePlugin(StrikethroughPlugin.create())
                 .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {

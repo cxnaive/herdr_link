@@ -6,6 +6,7 @@ project follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Render TeX mathematics offline in Android and Windows/Linux/macOS desktop conversations and Markdown previews, including inline/display delimiters and Chinese formula annotations. Keep incomplete or unsupported formulas readable as source; view long desktop formulas horizontally, or tap an Android formula to enlarge and copy its TeX.
 - English system README with architecture, setup, platform downloads, and build instructions. Release publication keeps both README download sections up to date.
 
 ### Changed

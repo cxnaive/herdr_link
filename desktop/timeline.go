@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui"
-	"github.com/egoist/mygo/ui/markdown"
 )
 
 const chatContentWidth = 800
@@ -124,7 +123,7 @@ func (a *application) timelineView(c *ui.Context, m *machine, chat *conversation
 				} else {
 					ui.Text(bc, chat.agent.Provider()).FontSize(12).TextColor(c.Theme().TextMuted)
 					if e.Text != "" {
-						markdown.View(bc, chat.markdownText(e.ID, e.Text), chat.md)
+						a.markdownView(bc, chat.markdownText(e.ID, e.Text), chat.md)
 					}
 					a.conversationImagesView(bc, m, chat, entryImages(*e, false))
 				}
