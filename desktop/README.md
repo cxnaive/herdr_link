@@ -155,7 +155,7 @@ python3 scripts/test_package_linux.py
 
 图形 smoke test 还需 Xvfb、D-Bus、GNOME Keyring、xdotool 和 ImageMagick，依赖配置见 [Linux CI](../.github/workflows/desktop-linux.yml)。CI 下载包为预览产物，保留时间有限；构建不会自动发布 Release 或部署 Relay。
 
-## 数学公式（开发分支）
+## 数学公式（0.3.4）
 
 Windows / Linux / macOS 共用原生公式渲染：对话回答及 Markdown 预览识别 `\(...\)`、`$...$`、`\[...\]`、`$$...$$`。常用分数、求和、矩阵、上下标和中文注释在本机离线排版，不需要 Node、浏览器或 TeX 安装。长块公式可横向滚动，右键“复制 TeX 公式”。数学符号随深浅主题着色，中文使用系统字体（Linux 可安装 `fonts-noto-cjk`）。
 
