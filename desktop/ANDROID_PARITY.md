@@ -9,7 +9,7 @@
 | 电脑 → 项目 → Agent | 两级独立折叠、保存状态、搜索临时展开，服务端名称与排序 | `sidebar.go` |
 | 名称与 ID | 标签名称优先；详情显示会话 ID，管理菜单复制 ID | `view.go`、`management.go` |
 | 新建 Agent | 项目旁「＋」/项目右键：提供方、名称、初始任务、额外 argv | `management.go` |
-| Codex 默认参数 | 显示 Relay 公布的默认参数；客户端只提交额外 argv。Relay 自动附加 `-c tui.terminal_title=["thread-id","thread-name"]`，重启沿用且不重复 | `internal/relay/management.go`、根模块 `internal/coordinator/launch_args.go` |
+| Codex 默认参数 | 显示 Relay 公布的默认参数；客户端只提交额外 argv。Relay 自动附加 `-c tui.terminal_title=["thread-id","thread-name"]`（Windows 用等价 TOML 单引号），重启沿用且不重复 | `internal/relay/management.go`、根模块 `internal/coordinator/launch_args.go` |
 | Agent 管理 | Agent 右键/顶部「管理」：改名、停止、重启、清空、排序；停止/重启/清空先确认目标 | `management.go` |
 | 模型/思考强度 | 动态读取 Codex 模型目录及设置版本，保存后验证有效值，未知结果重新读取 | `management.go` |
 | 审批 | 对话卡片显示请求/命令/选项；携带精确目标、事件 ID 和审批指纹 | `interaction.go` |

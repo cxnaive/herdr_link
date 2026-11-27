@@ -28,7 +28,7 @@ func TestCodexTitleDefaultPrecedesUserArgsAndIsStableOnRestart(t *testing.T) {
 			original := slices.Clone(user)
 			request := StartRequest{AgentArgs: user, Prompt: "do not change the prompt"}
 			got, err := request.launchArgs("codex")
-			want := append([]string{"-c", `tui.terminal_title=["thread-id","thread-name"]`}, user...)
+			want := append(AgentLaunchDefaults()["codex"], user...)
 			if err != nil || !slices.Equal(got, want) {
 				t.Fatalf("argv = %q, %v", got, err)
 			}
@@ -101,5 +101,24 @@ func TestAdvertisedLaunchDefaultsMatchEffectiveArgsAndAreIndependent(t *testing.
 	}
 	if len(defaults) != 1 {
 		t.Fatal("other providers inherited Codex defaults")
+	}
+}
+
+func TestCodexTitleArgvAcrossPlatforms(t *testing.T) {
+	for _, platform := range []string{"windows", "linux", "darwin"} {
+		t.Run(platform, func(t *testing.T) {
+			title := `tui.terminal_title=["thread-id","thread-name"]`
+			if platform == "windows" {
+				title = `tui.terminal_title=['thread-id','thread-name']`
+			}
+			user := []string{"-c", `model="user choice"`, "--config=tui.terminal_title=[]", "--", codexTerminalTitleDefault}
+			want := append([]string{"-c", title}, user...)
+			for _, saved := range [][]string{user, want, append([]string{"-c", codexTerminalTitleDefault}, user...)} {
+				before := slices.Clone(saved)
+				if got := codexLaunchArgs(saved, platform); !slices.Equal(got, want) || !slices.Equal(saved, before) {
+					t.Fatalf("got %q; want %q; input %q", got, want, saved)
+				}
+			}
+		})
 	}
 }

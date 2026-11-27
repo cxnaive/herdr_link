@@ -37,6 +37,9 @@ func TestCodexTitleLayoutRequiresExplicitNativeArgs(t *testing.T) {
 		{"codex", "-c", titleConfig, "-c", "model=custom"},
 		{"codex", "--config", `tui.terminal_title = ["thread-id", "thread-name"]`},
 		{"codex", "--config", `tui.terminal_title=["thread-id"]`},
+		append([]string{"codex"}, coordinator.AgentLaunchDefaults()["codex"]...),
+		{"codex", "-c", `tui.terminal_title=['thread-id','thread-name']`},
+		{"codex", "-c", `tui.terminal_title = [ 'thread-id' ]`},
 		{"codex", "-c", `tui.terminal_title=[]`, "-c", titleConfig},
 		{"codex", "-c", titleConfig, "--", "--config=tui.terminal_title=[]"},
 	} {
@@ -53,6 +56,9 @@ func TestCodexTitleLayoutRequiresExplicitNativeArgs(t *testing.T) {
 		{"codex", "-c", titleConfig, "-c", `tui={terminal_title=[]}`},
 		{"codex", "-c", titleConfig, "-c", `tui."terminal_title"=[]`},
 		{"codex", "-c", titleConfig, "-c", `tui.terminal_title=["thread-name","thread-id"]`},
+		{"codex", "-c", `tui.terminal_title=['thread-name','thread-id']`},
+		{"codex", "-c", `tui.terminal_title=[thread-id,thread-name]`},
+		{"codex", "-c", `tui.terminal_title=['thread-id','thread-name']`, "--config=tui.terminal_title=[]"},
 		{"codex", "-c", titleConfig, "-c"}, {"codex", "-c", titleConfig, "-c", "bad"},
 		{"codex", "-c", titleConfig, "--image"}, {"codex", "-c", titleConfig, "--no-daemon=false"},
 	} {

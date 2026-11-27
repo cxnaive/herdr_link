@@ -2,16 +2,33 @@ package coordinator
 
 import (
 	"errors"
+	"runtime"
 
 	"github.com/0cv/herdr-mobile-relay/internal/profiles"
 )
 
 const codexTerminalTitleDefault = `tui.terminal_title=["thread-id","thread-name"]`
+const windowsCodexTerminalTitleDefault = `tui.terminal_title=['thread-id','thread-name']`
+
+func codexLaunchArgs(user []string, platform string) []string {
+	title := codexTerminalTitleDefault
+	if platform == "windows" {
+		// PowerShell 5.1 strips embedded double quotes when codex.ps1 forwards
+		// argv to node.exe. TOML literal strings survive that native boundary.
+		title = windowsCodexTerminalTitleDefault
+	}
+	// Ownership records include the effective prefix. Replace only that exact
+	// pair on restart (including the pre-fix Windows spelling), never later overrides.
+	if len(user) >= 2 && user[0] == "-c" && (user[1] == title || user[1] == codexTerminalTitleDefault) {
+		user = user[2:]
+	}
+	return append([]string{"-c", title}, user...)
+}
 
 // AgentLaunchDefaults advertises the same built-in defaults used at launch.
 // Clients display these separately instead of copying them into user arguments.
 func AgentLaunchDefaults() map[string][]string {
-	return map[string][]string{"codex": {"-c", codexTerminalTitleDefault}}
+	return map[string][]string{"codex": codexLaunchArgs(nil, runtime.GOOS)}
 }
 
 func decodeAgentArgs(message map[string]any) ([]string, error) {

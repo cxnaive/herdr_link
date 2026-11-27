@@ -15,6 +15,10 @@ const codexTitleSelection = "terminal_title_id"
 
 var codexTitlePrefix = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{5}\.\.\.$`)
 
+// Accept the Windows launcher's TOML literal strings as well as the original
+// JSON-compatible spelling, without treating arbitrary TOML as identity evidence.
+var literalTitleIDLayout = regexp.MustCompile(`^\[[ \t]*'thread-id'[ \t]*(,[ \t]*'thread-name'[ \t]*)?\]$`)
+
 // Only a known ID-first title layout explicitly configured on this native TUI
 // enables the signal. Do not interpret arbitrary tab names or terminal output.
 func codexTitleIDConfigured(argv []string) bool {
@@ -48,7 +52,8 @@ func codexTitleIDConfigured(argv []string) bool {
 			switch path {
 			case "tui.terminal_title":
 				var items []string
-				enabled = json.Unmarshal([]byte(setting), &items) == nil && (slices.Equal(items, []string{"thread-id", "thread-name"}) || slices.Equal(items, []string{"thread-id"}))
+				enabled = literalTitleIDLayout.MatchString(strings.TrimSpace(setting)) ||
+					(json.Unmarshal([]byte(setting), &items) == nil && (slices.Equal(items, []string{"thread-id", "thread-name"}) || slices.Equal(items, []string{"thread-id"})))
 			case "tui":
 				// A table override may replace the title. Leave TOML interpretation to Codex.
 				enabled = false

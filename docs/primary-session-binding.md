@@ -45,7 +45,9 @@ TUI selection. The policy must not be described as eliminating that trust bounda
 
 Relay-launched built-in Codex agents default to
 `-c 'tui.terminal_title=["thread-id","thread-name"]'`. The inspected native TUI argv
-must contain that effective layout (or `["thread-id"]`); Node wrappers, positional
+must contain that effective layout (or `["thread-id"]`); the Windows Relay uses
+equivalent TOML single-quoted strings to survive PowerShell 5.1 forwarding.
+Node wrappers, positional
 prompt text after `--`, unknown options, alternative layouts and disabling or
 unrecognized overrides do not enable this path. Merely changing a Tab name, a
 UUID appearing in output, or a global config file is not enough. No global

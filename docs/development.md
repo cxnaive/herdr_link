@@ -76,7 +76,9 @@ Relay does not guess, translate or repair them.
 Starting with Relay `codexfix.17`, for the resolved built-in **Codex** kind only,
 Relay prepends
 `-c 'tui.terminal_title=["thread-id","thread-name"]'`. These are two argv entries;
-the shell quotes shown here are not part of the value. Explicit user `-c` /
+the shell quotes shown here are not part of the value. On Windows the second entry is
+`tui.terminal_title=['thread-id','thread-name']`: TOML literal strings retain their
+quotes when Windows PowerShell 5.1 forwards `codex.ps1` arguments to Node. Explicit user `-c` /
 `--config` overrides follow the default, so Codex applies the user's title choice
 last (including `tui.terminal_title=[]` to disable it). The saved prefix is not
 added again on Restart/Clear. The combined default and user argv must fit the

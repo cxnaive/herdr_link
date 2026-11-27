@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -271,12 +272,11 @@ func (request StartRequest) launchArgs(kind string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if kind == "codex" && !(len(request.AgentArgs) >= 2 && request.AgentArgs[0] == "-c" && request.AgentArgs[1] == codexTerminalTitleDefault) {
-		// Prepending lets Codex apply explicit user overrides last. Ownership
-		// stores this prefix, so a restart must not prepend it a second time.
-		args = append(args, "-c", codexTerminalTitleDefault)
+	user := request.AgentArgs
+	if kind == "codex" {
+		user = codexLaunchArgs(user, runtime.GOOS)
 	}
-	args = append(args, request.AgentArgs...)
+	args = append(args, user...)
 	if err := profiles.ValidateLaunchArgs(args); err != nil {
 		return nil, err
 	}

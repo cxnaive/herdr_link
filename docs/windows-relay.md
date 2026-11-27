@@ -51,6 +51,14 @@ Relay 保持运行，再开一个 PowerShell：
 - 非 Codex Agent 继续使用 Herdr 的上报与已有解析器；每种 Agent 的 Windows 安装路径／历史格式仍需分别验证。
 - Pi Unix 本地命令桥、直接 PTY ioctl 尺寸租约、Unix reload/bootstrap 信号、插件自更新及托管 Web 部署不提供 Windows 支持。桌面终端尺寸由 Herdr 的终端协议处理。
 
+### Windows PowerShell 5.1 下启动 Codex
+
+通过客户端点「＋ Agent」时，Windows Relay 给内置 Codex 传入 `-c` 和 `tui.terminal_title=['thread-id','thread-name']` 两个参数。数组中的单引号是 TOML 的一部分，经过 `codex.ps1` 转发到 `node.exe` 后仍保留。无需改客户端、Gateway 或全局 `config.toml`。旧 Relay 上若看到 `expected a sequence`，可以先在项目终端手动运行：
+
+```powershell
+& codex -c "tui.terminal_title=['thread-id','thread-name']"
+```
+
 ## 在其他盘的项目中创建 Agent（v0.3.4 之后）
 
 更新 **Windows Relay 和使用的 Android／桌面客户端** 后，可直接在已有的 `D:\platform` 工作空间点“＋ Agent”。无需把项目移到用户目录、添加白名单或重新配对。若项目还未加入 Herdr，可先用控制者的“创建工作区／添加项目”输入完整路径。目录必须已经存在，并能由运行 Relay 的普通 Windows 用户访问。`D:platform` 不是绝对路径，UNC／设备路径也不支持。工作空间已移动时请刷新再选，Relay 不会在另一个同名目录中启动。
