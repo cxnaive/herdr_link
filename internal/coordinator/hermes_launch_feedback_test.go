@@ -38,7 +38,7 @@ func TestHermesLaunchReceiptFollowsStartNotTabCreation(t *testing.T) {
 				" 'agent start') touch \""+entered+"\"; while [ ! -f \""+release+"\" ]; do sleep 0.01; done; "+response+" ;;\n"+
 				" *) exit 2 ;;\nesac\n")
 			socket := filepath.Join(testSocketDir(t), "herdr.sock")
-			startInventorySocket(t, socket, []any{map[string]any{"workspace_id": "workspace"}}, herdr.Pane{ID: "pane-new", TerminalID: "terminal-new", TabID: "tab-new", WorkspaceID: "workspace"})
+			startInventorySocket(t, socket, []any{map[string]any{"workspace_id": "workspace", "cwd": cwd}}, herdr.Pane{ID: "pane-new", TerminalID: "terminal-new", TabID: "tab-new", WorkspaceID: "workspace"})
 			client := herdr.NewClient(bin, socket)
 			d := NewDispatcher(client, NewState(testLogger()), nil, testLogger())
 			d.SetProfiles(profiles.NewResolver(filepath.Join(dir, "config"), nil))

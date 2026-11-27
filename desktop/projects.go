@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/cxnaive/herdr-desktop/internal/relay"
 	"github.com/egoist/mygo/ui"
@@ -187,7 +186,7 @@ func (a *application) submitProject(d *projectDialog) {
 		req["label"] = value["name"]
 		if d.kind == "workspace_create" {
 			p := strings.TrimSpace(d.path)
-			if !strings.HasPrefix(p, "/") || strings.ContainsFunc(p, unicode.IsControl) {
+			if !relay.RemoteDirectoryPath(p) {
 				d.message = "请输入远端电脑上的绝对目录路径"
 				return
 			}

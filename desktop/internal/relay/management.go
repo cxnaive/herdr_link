@@ -61,8 +61,15 @@ func RenamePayload(name string) (Message, error) {
 
 var launchName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,31}$`)
 
+var driveAbsolute = regexp.MustCompile(`^[A-Za-z]:[\\/]`)
+
+// RemoteDirectoryPath checks the Relay's path syntax, not the client's OS.
+func RemoteDirectoryPath(p string) bool {
+	return !strings.ContainsFunc(p, unicode.IsControl) && ((strings.HasPrefix(p, "/") && !strings.HasPrefix(p, "//")) || driveAbsolute.MatchString(p))
+}
+
 func LaunchPayload(w Workspace, profile, name, prompt, extra string, argsSupported bool) (Message, error) {
-	if w.ServerSessionID != "primary" || w.ID == "" || strings.HasPrefix(w.ID, "cwd:") || !strings.HasPrefix(w.Cwd, "/") || strings.ContainsFunc(w.Cwd, unicode.IsControl) {
+	if w.ServerSessionID != "primary" || w.ID == "" || strings.HasPrefix(w.ID, "cwd:") || !RemoteDirectoryPath(w.Cwd) {
 		return nil, errors.New("项目身份或目录已变化，请刷新列表")
 	}
 	if profile == "" {

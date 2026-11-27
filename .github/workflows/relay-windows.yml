@@ -98,6 +98,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows platform boundary tests failed.' }
           go test -count=1 -timeout=90s -run '^TestWindowsCodex' ./internal/app
           if ($LASTEXITCODE -ne 0) { throw 'Windows Codex ownership tests failed.' }
+          go test -count=1 ./internal/coordinator -run '^TestProjectCwd'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows project directory and junction checks failed.' }
           go test -count=1 ./internal/pathidentity
           if ($LASTEXITCODE -ne 0) { throw 'Windows path identity tests failed.' }
           go test -count=1 ./internal/localpair -run TestInfo

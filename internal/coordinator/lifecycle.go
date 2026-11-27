@@ -9,9 +9,11 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/0cv/herdr-mobile-relay/internal/herdr"
 	"github.com/0cv/herdr-mobile-relay/internal/hermesprofiles"
+	"github.com/0cv/herdr-mobile-relay/internal/pathidentity"
 	"github.com/0cv/herdr-mobile-relay/internal/profiles"
 )
 
@@ -105,7 +107,7 @@ func (l *Lifecycle) ValidateStart(request StartRequest) (profiles.Profile, Start
 		return profiles.Profile{}, request, err
 	}
 	request.AgentArgs = append([]string(nil), request.AgentArgs...)
-	cwd, err := l.ResolveCwd(request.Cwd)
+	cwd, err := resolveProjectCwd(request.Cwd)
 	if err != nil {
 		return profiles.Profile{}, request, err
 	}
@@ -133,10 +135,6 @@ func (l *Lifecycle) Start(ctx context.Context, profile profiles.Profile, request
 			}
 		}()
 	}
-	if existing := l.reconcileExisting(ctx, profile.ID, request, agentArgs); existing.PaneID != "" {
-		expectedTerminal = existing.TerminalID
-		return StartResult{PaneID: existing.PaneID, Name: request.Name, Cwd: request.Cwd, WorkspaceID: request.WorkspaceID}, nil
-	}
 
 	deadline, ok := ctx.Deadline()
 	if !ok {
@@ -158,8 +156,14 @@ func (l *Lifecycle) Start(ctx context.Context, profile profiles.Profile, request
 		return StartResult{}, err
 	}
 	workspaceID := request.WorkspaceID
-	if workspaceID != "" && !workspaceExists(workspaces, workspaceID) {
-		return StartResult{}, errors.New("workspace is unavailable")
+	if workspaceID != "" {
+		if err := l.checkLaunchWorkspace(startupCtx, workspaces, workspaceID, request.Cwd); err != nil {
+			return StartResult{}, err
+		}
+	}
+	if existing := l.reconcileExisting(inventory.Panes, profile.ID, request, agentArgs); existing.PaneID != "" {
+		expectedTerminal = existing.TerminalID
+		return StartResult{PaneID: existing.PaneID, Name: request.Name, Cwd: request.Cwd, WorkspaceID: request.WorkspaceID}, nil
 	}
 	if workspaceID == "" {
 		workspaceID = SelectWorkspaceForCwd(request.Cwd, inventory.Panes, workspaces, l.home)
@@ -356,17 +360,13 @@ func remainingTimeoutMS(ctx context.Context) int {
 	return int(min(remaining, agentStartProcessTimeoutMS))
 }
 
-func (l *Lifecycle) reconcileExisting(ctx context.Context, profileID string, request StartRequest, agentArgs []string) profiles.PaneIdentity {
-	inventory, err := l.herdr.GetInventory(ctx)
-	if err != nil {
-		return profiles.PaneIdentity{}
-	}
-	for _, pane := range inventory.Panes {
+func (l *Lifecycle) reconcileExisting(panes []herdr.Pane, profileID string, request StartRequest, agentArgs []string) profiles.PaneIdentity {
+	for _, pane := range panes {
 		if pane.Name != request.Name {
 			continue
 		}
 		cwd, err := filepath.EvalSymlinks(pane.Cwd)
-		if err != nil || cwd != request.Cwd {
+		if err != nil || !pathidentity.SameDirectory(cwd, request.Cwd) {
 			continue
 		}
 		if request.WorkspaceID != "" && pane.WorkspaceID != request.WorkspaceID {
@@ -380,53 +380,41 @@ func (l *Lifecycle) reconcileExisting(ctx context.Context, profileID string, req
 	return profiles.PaneIdentity{}
 }
 
-func workspaceExists(workspaces []herdr.Workspace, workspaceID string) bool {
-	for _, workspace := range workspaces {
-		if workspace.ID == workspaceID {
-			return true
-		}
+// Use the same directory source as the workspace list shown to clients. An ID
+// alone is not proof that the project still points to the selected directory.
+func (l *Lifecycle) checkLaunchWorkspace(ctx context.Context, workspaces []herdr.Workspace, id, cwd string) error {
+	w, ok := workspaceByID(workspaces, id)
+	if !ok {
+		return errors.New("workspace is unavailable")
 	}
-	return false
+	dir := workspaceDirectory(w)
+	if dir == "" {
+		// Tab inventory is optional in the poller as well; pane evidence is required.
+		tabs, _ := l.herdr.TabList(ctx)
+		panes, err := l.herdr.PaneList(ctx)
+		if err != nil {
+			return err
+		}
+		selected := []herdr.Workspace{w}
+		hydrateWorkspaceCwds(selected, tabs, panes)
+		dir = selected[0].Cwd
+	}
+	resolved, err := resolveProjectCwd(dir)
+	if err != nil || !pathidentity.SameDirectory(resolved, cwd) {
+		return errors.New("workspace directory has changed or is unavailable; refresh the workspace list")
+	}
+	return nil
 }
 
-func (l *Lifecycle) ResolveCwd(raw string) (string, error) {
-	if raw == "" {
-		return "", errors.New("cwd is required")
+func resolveProjectCwd(raw string) (string, error) {
+	if !filepath.IsAbs(raw) || strings.HasPrefix(filepath.ToSlash(raw), "//") || strings.ContainsFunc(raw, unicode.IsControl) {
+		return "", errors.New("cwd must be an absolute local directory on the Relay computer")
 	}
-	home, err := filepath.Abs(l.home)
-	if err != nil {
-		return "", errors.New("home directory is unavailable")
+	resolved, err := filepath.EvalSymlinks(raw)
+	if err != nil || strings.HasPrefix(filepath.ToSlash(resolved), "//") {
+		return "", errors.New("cwd is not an accessible local directory")
 	}
-	absolute, err := filepath.Abs(raw)
-	if err != nil {
-		return "", errors.New("cwd is invalid")
-	}
-	resolvedHome, err := filepath.EvalSymlinks(home)
-	if err != nil {
-		return "", errors.New("home directory is unavailable")
-	}
-	resolved, err := filepath.EvalSymlinks(absolute)
-	if err != nil {
-		return "", errors.New("cwd is not an accessible directory inside the home directory")
-	}
-	relative, err := filepath.Rel(resolvedHome, resolved)
-	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", errors.New("cwd must be inside the home directory")
-	}
-	if relative == "." {
-		return "", errors.New("cwd must be a project directory below the home directory")
-	}
-	root, err := os.OpenRoot(resolvedHome)
-	if err != nil {
-		return "", errors.New("home directory is unavailable")
-	}
-	defer root.Close()
-	directory, err := root.Open(relative)
-	if err != nil {
-		return "", errors.New("cwd is not an accessible directory inside the home directory")
-	}
-	defer directory.Close()
-	info, err := directory.Stat()
+	info, err := os.Stat(resolved)
 	if err != nil || !info.IsDir() {
 		return "", errors.New("cwd is not an accessible directory")
 	}
@@ -449,7 +437,7 @@ func SelectWorkspaceForCwd(cwd string, panes []herdr.Pane, workspaces []herdr.Wo
 		count := byWorkspace[pane.WorkspaceID]
 		count.total++
 		paneCwd, err := filepath.EvalSymlinks(pane.Cwd)
-		if err == nil && paneCwd == target {
+		if err == nil && pathidentity.SameDirectory(paneCwd, target) {
 			count.matching++
 		}
 		byWorkspace[pane.WorkspaceID] = count

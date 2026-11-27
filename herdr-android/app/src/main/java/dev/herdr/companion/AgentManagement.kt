@@ -5,10 +5,15 @@ import org.json.JSONObject
 
 /** Pure validation and exact-target payloads shared by the management dialogs. */
 object AgentManagement {
+    // This path belongs to the remote Relay, not the Android filesystem.
+    private val driveAbsolute = Regex("""^[A-Za-z]:[\\/]""")
+    private fun isRemoteDirectory(path: String): Boolean = path.none { it.isISOControl() } &&
+        ((path.startsWith('/') && !path.startsWith("//")) || driveAbsolute.containsMatchIn(path))
+
     fun launchPayload(workspace: JSONObject, profile: String, name: String, prompt: String, arguments: String = "", launchArgsSupported: Boolean = false): JSONObject {
         val id = workspace.optString("workspace_id")
         val cwd = workspace.optString("cwd")
-        require(id.isNotBlank() && !id.startsWith("cwd:") && cwd.startsWith('/') && cwd.none { it.isISOControl() }) { "工作空间身份或目录不可用，请刷新列表" }
+        require(id.isNotBlank() && !id.startsWith("cwd:") && isRemoteDirectory(cwd)) { "工作空间身份或目录不可用，请刷新列表" }
         require(AgentPresentation.server(workspace) == "primary") { "此 Relay 尚不支持在其他 server session 下创建 Agent" }
         require(profile.isNotBlank()) { "请选择 Agent 类型" }
         require(name.matches(Regex("[a-z][a-z0-9_-]{0,31}"))) { "名称须以小写字母开头，最多 32 位，可含数字、_ 和 -" }

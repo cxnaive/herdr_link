@@ -31,7 +31,7 @@ func (d *Dispatcher) HandleWorkspaceCreate(
 	if d.lifecycle == nil {
 		return d.fail(requestID, action, "", "Agent profiles are unavailable")
 	}
-	resolved, err := d.lifecycle.ResolveCwd(cwd)
+	resolved, err := resolveProjectCwd(cwd)
 	if err != nil {
 		return d.fail(requestID, action, "", err.Error())
 	}

@@ -70,7 +70,7 @@ func TestLifecycleStartsAgentInExplicitWorkspace(t *testing.T) {
 	writeScript(t, dir, "codex", "#!/bin/sh\nexit 0\n")
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	home := filepath.Join(dir, "home")
-	cwd := filepath.Join(home, "project")
+	cwd := filepath.Join(dir, "mounted-project")
 	if err := os.MkdirAll(cwd, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestLifecycleStartsAgentInExplicitWorkspace(t *testing.T) {
 	socketPath := filepath.Join(testSocketDir(t), "herdr.sock")
 	startInventorySocket(t, socketPath, []any{
 		map[string]any{"workspace_id": "workspace-existing", "label": "Project"},
-	}, herdr.Pane{ID: "pane-new", TerminalID: "terminal-new", TabID: "tab-new", WorkspaceID: "workspace-existing"})
+	}, herdr.Pane{ID: "pane-new", TerminalID: "terminal-new", TabID: "tab-new", WorkspaceID: "workspace-existing", Cwd: cwd})
 	lifecycle := &Lifecycle{
 		herdr:    herdr.NewClient(bin, socketPath),
 		profiles: profiles.NewResolver(filepath.Join(dir, "config"), nil),
@@ -95,6 +95,14 @@ func TestLifecycleStartsAgentInExplicitWorkspace(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	// A valid but different project must fail before any tab is created.
+	other := t.TempDir()
+	if _, err := lifecycle.Start(ctx, profiles.Profile{ID: "codex", Kind: "codex"}, StartRequest{ProfileID: "codex", WorkspaceID: "workspace-existing", Name: "wrong-project", Cwd: other}); err == nil {
+		t.Fatal("accepted a stale workspace/cwd pair")
+	}
+	if _, err := os.Stat(record); !os.IsNotExist(err) {
+		t.Fatalf("unexpected Herdr invocation before workspace validation: %v", err)
+	}
 	result, err := lifecycle.Start(ctx, profiles.Profile{ID: "codex", Kind: "codex"}, StartRequest{
 		ProfileID:   "codex",
 		WorkspaceID: "workspace-existing",
@@ -111,7 +119,7 @@ func TestLifecycleStartsAgentInExplicitWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(invocations), "tab create --workspace workspace-existing") {
+	if !strings.Contains(string(invocations), "tab create --workspace workspace-existing --cwd "+cwd) {
 		t.Fatalf("explicit workspace was not used:\n%s", invocations)
 	}
 	if strings.Contains(string(invocations), "workspace create") {

@@ -40,6 +40,21 @@ func TestLaunchArgsPreserveLiteralDataAndServerDefaults(t *testing.T) {
 		}
 	}
 }
+func TestLaunchUsesRemotePathSyntax(t *testing.T) {
+	for _, path := range []string{`D:\platform`, `d:/项目 A`, "/mnt/projects", "/Volumes/Projects"} {
+		w := Workspace{ID: "project", ServerSessionID: "primary", Cwd: path}
+		p, err := LaunchPayload(w, "codex", "test", "", "", false)
+		if err != nil || p["cwd"] != path || p["workspace_id"] != w.ID {
+			t.Fatalf("%q: %v, %v", path, p, err)
+		}
+	}
+	for _, path := range []string{`D:platform`, `\platform`, `\\server\share`, "//server/share", "D:/a\nb"} {
+		if RemoteDirectoryPath(path) {
+			t.Errorf("accepted %q", path)
+		}
+	}
+}
+
 func TestManagementPermissionsSettingsAndNames(t *testing.T) {
 	a := Agent{Target: Target{PaneID: "p", TerminalID: "t"}, Agent: "codex", BindingState: "conflict"}
 	if !a.OperationWritable("agent_restart") || a.OperationWritable("set_agent_settings") || a.OperationWritable("respond") {

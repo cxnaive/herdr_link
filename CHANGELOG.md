@@ -5,6 +5,9 @@ project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Create workspaces and start Agents in accessible local project directories outside the Relay user's home, without a per-directory allowlist. Android and desktop accept Windows drive paths as well as Unix paths; the Relay verifies the selected workspace still points to the requested directory before starting.
+
 ## [0.3.4] - 2026-11-23
 
 ### Added

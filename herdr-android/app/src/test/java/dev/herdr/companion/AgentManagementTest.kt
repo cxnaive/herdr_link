@@ -19,6 +19,15 @@ class AgentManagementTest {
         }
         for (name in listOf("", "中文名称", "Writer", "-flag", "bad name", "x".repeat(33))) assertThrows(IllegalArgumentException::class.java) { AgentManagement.launchPayload(workspace("one"), "codex", name, "") }
     }
+    @Test fun remoteProjectPathsUseTheRelaysSyntaxAndAreSentUnchanged() {
+        fun launch(path: String) = AgentManagement.launchPayload(workspace("project").put("cwd", path), "codex", "test", "")
+        for (path in listOf("D:\\platform", "d:/项目 A", "/mnt/projects", "/Volumes/Projects")) {
+            assertEquals(path, launch(path).getString("cwd"))
+        }
+        for (path in listOf("D:platform", "\\platform", "\\\\server\\share", "//server/share", "D:\\a\nb")) {
+            assertThrows(IllegalArgumentException::class.java) { launch(path) }
+        }
+    }
     @Test fun renameAllowsChineseTabLabelsButRejectsControls() {
         assertEquals("论文调研", AgentManagement.renamePayload(" 论文调研 ").getString("name"))
         for (name in listOf("", "a\nb", "a\u001bb", "x".repeat(129))) assertThrows(IllegalArgumentException::class.java) { AgentManagement.renamePayload(name) }

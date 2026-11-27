@@ -78,6 +78,8 @@ func startInventorySocket(t *testing.T, socketPath string, workspaces []any, pan
 				switch request.Method {
 				case "workspace.list":
 					result = map[string]any{"type": "workspace_list", "workspaces": workspaces}
+				case "tab.list":
+					result = map[string]any{"type": "tab_list", "tabs": []any{}}
 				case "pane.list":
 					result = map[string]any{"type": "pane_list", "panes": panes}
 				case "workspace.close":

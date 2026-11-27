@@ -22,6 +22,18 @@ be left empty. Launch controls wait for the result, and uncertain outcomes requi
 manual inspection before creating again. Neither launch nor model changes are
 silently retried after a lost acknowledgement.
 
+## Project directories (after v0.3.4)
+
+A controller can create a workspace or start an Agent in an existing local
+absolute directory accessible to the Relay's OS account. It need not be under
+that account's home: `D:\platform`, `/mnt/projects` and `/Volumes/Projects` are
+valid examples. No allowlist or Gateway change is needed. Android and desktop
+send the remote path unchanged; drive-relative paths such as `D:platform` and
+UNC/device paths are not supported. When starting in a selected workspace, the
+Relay checks its ID and current directory before creating the tab, resolving
+links and Windows junctions. Refresh the workspace list if it has moved. This
+changes neither reader permissions nor file browsing/download scope.
+
 ## Per-session model settings
 
 New encrypted Relay commands:

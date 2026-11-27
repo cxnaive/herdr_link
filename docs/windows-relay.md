@@ -51,6 +51,10 @@ Relay 保持运行，再开一个 PowerShell：
 - 非 Codex Agent 继续使用 Herdr 的上报与已有解析器；每种 Agent 的 Windows 安装路径／历史格式仍需分别验证。
 - Pi Unix 本地命令桥、直接 PTY ioctl 尺寸租约、Unix reload/bootstrap 信号、插件自更新及托管 Web 部署不提供 Windows 支持。桌面终端尺寸由 Herdr 的终端协议处理。
 
+## 在其他盘的项目中创建 Agent（v0.3.4 之后）
+
+更新 **Windows Relay 和使用的 Android／桌面客户端** 后，可直接在已有的 `D:\platform` 工作空间点“＋ Agent”。无需把项目移到用户目录、添加白名单或重新配对。若项目还未加入 Herdr，可先用控制者的“创建工作区／添加项目”输入完整路径。目录必须已经存在，并能由运行 Relay 的普通 Windows 用户访问。`D:platform` 不是绝对路径，UNC／设备路径也不支持。工作空间已移动时请刷新再选，Relay 不会在另一个同名目录中启动。
+
 ## 测试和升级
 
 Ubuntu 可以交叉编译并验证平台无关协议以及 Linux 回归，不能替代 Windows 原生执行。`relay-windows.yml` 使用 Windows 2025 runner 验证命名管道、ACL、进程树取消，安装固定摘要的真实 Herdr，并启动隔离 Gateway／Relay，通过真实桌面客户端协议验证注册、配对、终端读写、Agent 释放、重连和关闭面板。

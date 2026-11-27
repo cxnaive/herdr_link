@@ -283,12 +283,19 @@ func hydrateWorkspaceCwds(workspaces []herdr.Workspace, tabs []herdr.Tab, panes 
 		}
 	}
 	for index := range workspaces {
-		if workspaces[index].Worktree != nil && workspaces[index].Worktree.CheckoutPath != "" {
-			workspaces[index].Cwd = workspaces[index].Worktree.CheckoutPath
-			continue
+		cwd := workspaceDirectory(workspaces[index])
+		if cwd == "" {
+			cwd = cwds[workspaces[index].ID]
 		}
-		workspaces[index].Cwd = cwds[workspaces[index].ID]
+		workspaces[index].Cwd = cwd
 	}
+}
+
+func workspaceDirectory(w herdr.Workspace) string {
+	if w.Worktree != nil && w.Worktree.CheckoutPath != "" {
+		return w.Worktree.CheckoutPath
+	}
+	return w.Cwd
 }
 
 func shorterPath(current, candidate string) string {
